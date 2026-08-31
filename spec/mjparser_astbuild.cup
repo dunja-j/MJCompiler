@@ -50,7 +50,7 @@ scan with {:
 :}
 
 terminal PROG, LBRACE, RBRACE, LBRACKET, RBRACKET, LPARENT, RPARENT, SEMI, COMMA, COLON, QUESTION, DOT;
-terminal BREAK, RETURN, ENUM, CONST, LENGTH, IF, ELSE, NEW, PRINT, READ, VOID, CONTINUE, FOR, FOREACH, SWITCH, CASE;
+terminal BREAK, RETURN, ENUM, CONST, LENGTH, IF, ELSE, NEW, PRINT, READ, VOID, CONTINUE, FOR, FOREACH, SWITCH, CASE, FINDANY;
 terminal ASSIGN, PLUS, MINUS, MUL, DIV, PERCENT, INC, DEC, EQUAL, NOTEQUAL, GRATHER, GRATHEREQUAL, LESS, LESSEQUAL, AND, OR;
 terminal Integer NUMBER, BOOL;
 terminal Character CHARACTER;
@@ -369,6 +369,8 @@ Designator ::= (Designator_var) IDENT:I1 {: RESULT=new Designator_var(I1); RESUL
 				(Designator_enumident) IDENT:I1 DOT IDENT:I2 {: RESULT=new Designator_enumident(I1, I2); RESULT.setLine(I1left); :}
 				|
 				(Designator_length) DesignatorArrLength:D1 {: RESULT=new Designator_length(D1); RESULT.setLine(D1left); :}
+				|
+				(Designator_findAny) IDENT:I1 DOT FINDANY LPARENT Expr:E2 RPARENT {: RESULT=new Designator_findAny(I1, E2); RESULT.setLine(I1left); :}
 				;
 
 DesignatorArrName ::= (DesignatorArrName) IDENT:I1 {: RESULT=new DesignatorArrName(I1); RESULT.setLine(I1left); :};

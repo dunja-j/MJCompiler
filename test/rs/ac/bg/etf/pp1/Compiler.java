@@ -24,7 +24,7 @@ import rs.etf.pp1.symboltable.concepts.Struct;
 public class Compiler {
 
 	// Configure the MJ program to compile here (matches test/<PROGRAM_NAME>.mj).
-	private static final String PROGRAM_NAME = "program";
+	private static final String PROGRAM_NAME = "test301_jul";
 
 	static {
 		DOMConfigurator.configure(Log4JUtils.instance().findLoggerConfigFile());

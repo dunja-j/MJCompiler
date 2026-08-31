@@ -31,7 +31,7 @@ Ovaj projekat koristi Apache Ant za automatizaciju koraka. U korenskom direktori
 - Pokretanje kompajliranog programa preko MJ runtime-a (koristi test/inputs.txt za ulaz):
   ant runObj
 
-Napomena: ciljni fajl koji se izvršava je "test/program.obj" (generisan iz MJ programa). Ako želite da kompajlirate i pokrenete sopstveni MJ program, zamenite ulazne fajlove i/ili konfiguraciju u Ant build fajlu.
+Napomena: ciljni fajl koji se izvršava je "test/program.obj" (generisan iz MJ programa). Ime MJ programa koji se kompajlira/pokreće/debaguje sada je konfigurabilno na dva mesta: (1) u Ant build fajlu, na vrhu build.xml, promenom vrednosti property-ja "program.name" (podrazumevano "program"), što određuje koji "test/<program.name>.obj" fajl targetuju disasm, debugObj i runObj; (2) u test/rs/ac/bg/etf/pp1/Compiler.java, promenom vrednosti konstante PROGRAM_NAME (podrazumevano "program"), što određuje koji "test/<PROGRAM_NAME>.mj" fajl se kompajlira i pod kojim imenom se generiše odgovarajući ".obj" fajl. Da biste kompajlirali i pokrenuli sopstveni MJ program (npr. test301 ili test302), postavite istu vrednost imena na oba mesta.
 
 
 3. Kratak opis priloženih test primera
@@ -47,14 +47,14 @@ U direktorijumu "test" nalaze se primeri MJ programa koji služe za testiranje f
 ----------------------------------
 U ovom rešenju uvedene su sledeće glavne klase (ostale su generisane alatima ili potiču iz podrške runtime biblioteke):
 
-- `CodeGenerator` (src/rs/ac/bg/etf/pp1/CodeGenerator.java): Visitor koji prolazi kroz AST i emituje bajt-kod za MJ runtime. Implementira podršku za metode, izraze, operatore, ternarni operator, pristup nizu, funkcije ord/chr/len i ostalo.
+- `Yylex` (src/rs/ac/bg/etf/pp1/Yylex.java): leksički analizator generisan iz `spec/mjlexer.lex` pomoću JFlex-a.
+
+- `MJParser` (src/rs/ac/bg/etf/pp1/MJParser.java): parser generisan iz `spec/mjparser.cup` pomoću Java CUP-a, kao i klase za apstraktno sintaksno stablo (`src/rs/ac/bg/etf/pp1/ast/*`).
 
 - `SemAnalyzer` (src/rs/ac/bg/etf/pp1/SemAnalyzer.java): Visitor za semantičku analizu. Proverava deklaracije, tipove, opseg promenljivih, validnost izraza, enum tipove, ispravnost return naredbi, petlje i druge semantičke uslove. Prijavljuje greške preko log4j.
+
+- `CodeGenerator` (src/rs/ac/bg/etf/pp1/CodeGenerator.java): Visitor koji prolazi kroz AST i emituje bajt-kod za MJ runtime. Implementira podršku za metode, izraze, operatore, ternarni operator, pristup nizu, funkcije ord/chr/len i ostalo.
 
 - `ObjToString` (src/rs/ac/bg/etf/pp1/ObjToString.java): pomoćna klasa koja pruža čitljiv ispis objektnog čvora (`Obj`) iz tabelarnog simbola, korisna za logovanje tokom semantičke analize.
 
 - `ActParsCounterr` (src/rs/ac/bg/etf/pp1/ActParsCounterr.java): pomoćna klasa za brojanje stvarnih parametara pri pozivu metoda i proveru njihove ispravnosti.
-
-- `Yylex` (src/rs/ac/bg/etf/pp1/Yylex.java): leksički analizator generisan iz `spec/mjlexer.lex` pomoću JFlex-a.
-
-- `MJParser` i klase iz AST paketa (`src/rs/ac/bg/etf/pp1/ast/*`): parser generisan iz `spec/mjparser.cup` pomoću Java CUP-a, kao i klase za apstraktno sintaksno stablo.
