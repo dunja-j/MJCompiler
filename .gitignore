@@ -12,3 +12,4 @@ src/rs/ac/bg/etf/pp1/ast/
 
 # Compiled MicroJava object files produced by running the compiler
 test/*.obj
+bin/*.obj
