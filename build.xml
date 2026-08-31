@@ -3,7 +3,7 @@
 
 	<!-- Change this single property to switch which MJ program is compiled/run/debugged.
 	     Source is expected at test/${program.name}.mj, object file is written to test/${program.name}.obj -->
-	<property name="program.name" value="program"/>
+	<property name="program.name" value="test301_jul"/>
 	<property name="program.mj" value="test/${program.name}.mj"/>
 	<property name="program.obj" value="test/${program.name}.obj"/>
 	
