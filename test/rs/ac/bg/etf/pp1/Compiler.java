@@ -23,6 +23,9 @@ import rs.etf.pp1.symboltable.concepts.Struct;
 
 public class Compiler {
 
+	// Configure the MJ program to compile here (matches test/<PROGRAM_NAME>.mj).
+	private static final String PROGRAM_NAME = "program";
+
 	static {
 		DOMConfigurator.configure(Log4JUtils.instance().findLoggerConfigFile());
 		Log4JUtils.instance().prepareLogFile(Logger.getRootLogger());
@@ -34,7 +37,7 @@ public class Compiler {
 		
 		Reader br = null;
 		try {
-			File sourceCode = new File("test/program.mj");
+			File sourceCode = new File("test/" + PROGRAM_NAME + ".mj");
 			log.info("Compiling source file: " + sourceCode.getAbsolutePath());
 			
 			br = new BufferedReader(new FileReader(sourceCode));
@@ -74,7 +77,7 @@ public class Compiler {
 			
 			if(!p.errorDetected && sa.passed()){
 				/* Generisanje koda */ 
-				File objFile = new File("test/program.obj");
+				File objFile = new File("test/" + PROGRAM_NAME + ".obj");
 				if(objFile.exists()) objFile.delete();
 				
 				CodeGenerator cg = new CodeGenerator();
