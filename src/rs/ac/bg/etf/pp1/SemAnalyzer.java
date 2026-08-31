@@ -35,6 +35,11 @@ public class SemAnalyzer extends VisitorAdaptor {
 	private int caseCnt = 0;
 	int nVars;  //da bi klasa Compile je dohvatila
 	
+	// findAny: skladiste skrivenih lokalnih promenljivih (brojac i mesto za pretragu) po AST cvoru,
+	// da bi CodeGenerator mogao da ih pronadje bez ponovnog Tab.find (posto se scope u toj fazi vise ne otvara)
+	static java.util.Map<Designator_findAny, Obj[]> findAnyTemps = new java.util.HashMap<>();
+	private int findAnyTempCounter = 0;
+	
 	private boolean ourAssignableTo(Struct s1, Struct s2) { // gledamo da li su s2 = s1
     	if(s1.assignableTo(s2)) return true;
     	else if(s2.getKind() == Struct.Int && s1.getKind() == Struct.Enum) return true;
@@ -409,6 +414,39 @@ public class SemAnalyzer extends VisitorAdaptor {
 	public void visit(Designator_length designatorLength) { 
 		//Obj objArr = designatorLength.getDesignatorArrLength().obj;
 		designatorLength.obj = new Obj(Obj.Con, "length", Tab.intType);
+	}
+	
+	@Override
+	public void visit(Designator_findAny findAny) {
+		Obj arrObj = Tab.find(findAny.getI1());
+		Struct elemType = null;
+	
+		if (arrObj == Tab.noObj) {
+			report_error("[DesignatorFindAny] Pristupamo nedefinisanoj promenljivi niza: " + findAny.getI1(), findAny);
+		}
+		else if (arrObj.getKind() != Obj.Var || arrObj.getType().getKind() != Struct.Array) {
+			report_error("[DesignatorFindAny] " + findAny.getI1() + " nije niz", findAny);
+		}
+		else {
+			elemType = arrObj.getType().getElemType();
+			if (!elemType.equals(Tab.intType) && !elemType.equals(Tab.charType) && !elemType.equals(boolType)) {
+				report_error("[DesignatorFindAny] Niz " + findAny.getI1() + " nije ugradjenog tipa (int/char/bool)", findAny);
+				elemType = null;
+			}
+			else if (!ourAssignableTo(findAny.getExpr().struct, elemType) && !ourAssignableTo(elemType, findAny.getExpr().struct)) {
+				report_error("[DesignatorFindAny] Neodgovarajuci tip izraza za pretragu u nizu: " + findAny.getI1(), findAny);
+				elemType = null;
+			}
+		}
+	
+		findAny.obj = new Obj(Obj.Con, "findAny", boolType);
+	
+		if (elemType != null) {
+			Obj counterObj = Tab.insert(Obj.Var, "$fa$i$" + findAnyTempCounter, Tab.intType);
+			Obj searchValObj = Tab.insert(Obj.Var, "$fa$v$" + findAnyTempCounter, elemType);
+			findAnyTempCounter++;
+			findAnyTemps.put(findAny, new Obj[]{ counterObj, searchValObj, arrObj });
+		}
 	}
 	
 	//////////////////////////// Factor

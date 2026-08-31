@@ -125,8 +125,8 @@ public class CodeGenerator extends VisitorAdaptor {
 	@Override
 	public void visit(FactorReal_d factor) {
 		fixupZaTernarniZaPocetakNaExpr2();
-		if (factor.getDesignator() instanceof Designator_length)
-	        return; //  !!!da uradi skip loading array.length on stack!!!
+		if (factor.getDesignator() instanceof Designator_length || factor.getDesignator() instanceof Designator_findAny)
+	        return; //  !!!da uradi skip loading array.length / findAny rezultat je vec na stacku!!!
 		
 		//za ovo pravimo visit, jer smo ga ovde tek pozvali
 		//ali npr gde radimo Designator = nesto, tu necemo jer to je store neki
@@ -180,6 +180,57 @@ public class CodeGenerator extends VisitorAdaptor {
 	
 	@Override
 	public void visit(Designator_expr designatorExpr) {
+	}
+	
+	@Override
+	public void visit(Designator_findAny findAny) {
+		fixupZaTernarniZaPocetakNaExpr2();
+	
+		Obj[] temps = SemAnalyzer.findAnyTemps.get(findAny);
+		if (temps == null) return; // semanticka greska je vec prijavljena, kod se ionako ne generise pri gresci
+	
+		Obj counterObj = temps[0];
+		Obj searchValObj = temps[1];
+		Obj arrObj = temps[2];
+	
+		// stack: [ EXPRVAL ] (vrednost za pretragu, vec je izracunata)
+		Code.store(searchValObj);	// searchVal = Expr
+		Code.loadConst(0);
+		Code.store(counterObj);	// i = 0
+	
+		int loopStart = Code.pc;
+		Code.load(counterObj);		// i
+		Code.load(arrObj);			// niz
+		Code.put(Code.arraylength);	// niz.length      stack: [i, length]
+		Code.putFalseJump(Code.lt, 0);	// ako i >= length -> notFound
+		int notFoundJmp = Code.pc - 2;
+	
+		Code.load(arrObj);			// niz
+		Code.load(counterObj);		// i               stack: [niz, i]
+		Code.load(new Obj(Obj.Elem, "$fa$elem", arrObj.getType().getElemType())); // niz[i]
+		Code.load(searchValObj);	// stack: [niz[i], searchVal]
+		Code.putFalseJump(Code.eq, 0);	// ako nije jednako -> nastavi (increment)
+		int notEqualJmp = Code.pc - 2;
+	
+		// pronadjeno
+		Code.loadConst(1);
+		Code.putJump(0);
+		int foundJmp = Code.pc - 2;
+	
+		// nije jednako, i++ pa nazad na pocetak petlje
+		Code.fixup(notEqualJmp);
+		Code.load(counterObj);
+		Code.loadConst(1);
+		Code.put(Code.add);
+		Code.store(counterObj);
+		Code.putJump(loopStart);
+	
+		// nije pronadjeno (petlja zavrsena)
+		Code.fixup(notFoundJmp);
+		Code.loadConst(0);
+	
+		// zajednicka tacka - rezultat (0/1) je na stacku
+		Code.fixup(foundJmp);
 	}
 	
 	

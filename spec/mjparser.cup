@@ -50,7 +50,7 @@ scan with {:
 :}
 
 terminal PROG, LBRACE, RBRACE, LBRACKET, RBRACKET, LPARENT, RPARENT, SEMI, COMMA, COLON, QUESTION, DOT;
-terminal BREAK, RETURN, ENUM, CONST, LENGTH, IF, ELSE, NEW, PRINT, READ, VOID, CONTINUE, FOR, FOREACH, SWITCH, CASE;
+terminal BREAK, RETURN, ENUM, CONST, LENGTH, IF, ELSE, NEW, PRINT, READ, VOID, CONTINUE, FOR, FOREACH, SWITCH, CASE, FINDANY;
 terminal ASSIGN, PLUS, MINUS, MUL, DIV, PERCENT, INC, DEC, EQUAL, NOTEQUAL, GRATHER, GRATHEREQUAL, LESS, LESSEQUAL, AND, OR;
 terminal Integer NUMBER, BOOL;
 terminal Character CHARACTER;
@@ -329,6 +329,8 @@ Designator ::= (Designator_var) IDENT
 				(Designator_enumident) IDENT DOT IDENT
 				|
 				(Designator_length) DesignatorArrLength
+				|
+				(Designator_findAny) IDENT DOT FINDANY LPARENT Expr RPARENT
 				;
 
 DesignatorArrName ::= (DesignatorArrName) IDENT;
