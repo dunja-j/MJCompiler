@@ -1,0 +1,60 @@
+MJ Compiler Project
+
+------------------------------
+
+Title: MJCompiler - compiler for a subset of the MJ language
+Author: Dunja Jankovic
+Date: August 31, 2026
+
+
+1. Kratak opis postavke zadatka
+------------------------------
+Ovaj projekat predstavlja implementaciju kompajlera za jednostavan programski jezik MJ. Cilj je parsiranje, semantička analiza i generisanje izvršnog bajt-koda za MJ programe koristeći alate JFlex (leksička analiza) i Java CUP (sintaksna analiza), kao i dodatne komponente za semantičku proveru i generisanje koda za runtime okruženje.
+
+
+2. Opis komandi za generisanje Java koda, prevođenje, pokretanje i testiranje
+--------------------------------------------------------------------------
+Ovaj projekat koristi Apache Ant za automatizaciju koraka. U korenskom direktorijumu projekta pokrenite sledeće komande (potrebno je imati instaliran Apache Ant):
+
+- Generisanje leksičkog analizatora (JFlex):
+  ant lexerGen
+
+- Generisanje parsera i AST klasa (Java CUP):
+  ant parserGen
+
+- Kompilacija Java koda (uključujući generisane fajlove):
+  ant compile
+
+- Disasembliranje (.obj fajla) za pregled generisanog bajt-koda:
+  ant disasm
+
+- Pokretanje kompajliranog programa preko MJ runtime-a (koristi test/inputs.txt za ulaz):
+  ant runObj
+
+Napomena: ciljni fajl koji se izvršava je "test/program.obj" (generisan iz MJ programa). Ako želite da kompajlirate i pokrenete sopstveni MJ program, zamenite ulazne fajlove i/ili konfiguraciju u Ant build fajlu.
+
+
+3. Kratak opis priloženih test primera
+--------------------------------------
+U direktorijumu "test" nalaze se primeri MJ programa koji služe za testiranje funkcionalnosti kompajlera:
+
+- test301.mj: demonstrira rad sa enumeracijama (enum), konstantama, rad sa nizovima, operacijama nad karakterima (ord/chr), ternarnim operatorom (?:), učitavanje sa standardnog ulaza (read) i ispis (print). Cilj je pokriti osnovne izraze, kontrolu toka i rad sa nizovima.
+
+- test302.mj: testira rad sa funkcijama (pozivi, povratne vrednosti), grananja (if/else), petlje (for, continue, break), logičke operacije (&&, ||), switch/case konstrukciju i nizove. Takođe koristi globalne i lokalne promenljive, kao i pozive funkcija uz parametre.
+
+
+4. Kratak opis novouvedenih klasa
+----------------------------------
+U ovom rešenju uvedene su sledeće glavne klase (ostale su generisane alatima ili potiču iz podrške runtime biblioteke):
+
+- `CodeGenerator` (src/rs/ac/bg/etf/pp1/CodeGenerator.java): Visitor koji prolazi kroz AST i emituje bajt-kod za MJ runtime. Implementira podršku za metode, izraze, operatore, ternarni operator, pristup nizu, funkcije ord/chr/len i ostalo.
+
+- `SemAnalyzer` (src/rs/ac/bg/etf/pp1/SemAnalyzer.java): Visitor za semantičku analizu. Proverava deklaracije, tipove, opseg promenljivih, validnost izraza, enum tipove, ispravnost return naredbi, petlje i druge semantičke uslove. Prijavljuje greške preko log4j.
+
+- `ObjToString` (src/rs/ac/bg/etf/pp1/ObjToString.java): pomoćna klasa koja pruža čitljiv ispis objektnog čvora (`Obj`) iz tabelarnog simbola, korisna za logovanje tokom semantičke analize.
+
+- `ActParsCounterr` (src/rs/ac/bg/etf/pp1/ActParsCounterr.java): pomoćna klasa za brojanje stvarnih parametara pri pozivu metoda i proveru njihove ispravnosti.
+
+- `Yylex` (src/rs/ac/bg/etf/pp1/Yylex.java): leksički analizator generisan iz `spec/mjlexer.lex` pomoću JFlex-a.
+
+- `MJParser` i klase iz AST paketa (`src/rs/ac/bg/etf/pp1/ast/*`): parser generisan iz `spec/mjparser.cup` pomoću Java CUP-a, kao i klase za apstraktno sintaksno stablo.
