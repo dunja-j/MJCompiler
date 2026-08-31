@@ -1,5 +1,11 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project name="MJCompilerA" basedir=".">
+
+	<!-- Change this single property to switch which MJ program is compiled/run/debugged.
+	     Source is expected at test/${program.name}.mj, object file is written to test/${program.name}.obj -->
+	<property name="program.name" value="program"/>
+	<property name="program.mj" value="test/${program.name}.mj"/>
+	<property name="program.obj" value="test/${program.name}.obj"/>
 	
 	<target name="delete">
 			<delete>
@@ -56,7 +62,7 @@
 	
 	<target name="disasm">
 		<java classname="rs.etf.pp1.mj.runtime.disasm">
-			<arg value="test/program.obj"/>
+			<arg value="${program.obj}"/>
 			<classpath>
 				<pathelement location="lib/mj-runtime-1.1.jar"/>
 			</classpath>
@@ -65,7 +71,7 @@
 	
 	<target name="debugObj" depends="disasm">
 		<java classname="rs.etf.pp1.mj.runtime.Run" input="test/inputs.txt">
-			<arg value="test/program.obj"/>
+			<arg value="${program.obj}"/>
 			<arg value="-debug"/>
 			<classpath>
 				<pathelement location="lib/mj-runtime-1.1.jar"/>
@@ -75,7 +81,7 @@
 	
 	<target name="runObj" depends="debugObj">
 		<java classname="rs.etf.pp1.mj.runtime.Run" input="test/inputs.txt">
-			<arg value="test/program.obj"/>
+			<arg value="${program.obj}"/>
 			<classpath>
 				<pathelement location="lib/mj-runtime-1.1.jar"/>
 			</classpath>
