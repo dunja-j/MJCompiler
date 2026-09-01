@@ -50,8 +50,8 @@ scan with {:
 :}
 
 terminal PROG, LBRACE, RBRACE, LBRACKET, RBRACKET, LPARENT, RPARENT, SEMI, COMMA, COLON, QUESTION, DOT;
-terminal BREAK, RETURN, ENUM, CONST, LENGTH, IF, ELSE, NEW, PRINT, READ, VOID, CONTINUE, FOR, FOREACH, SWITCH, CASE, FINDANY;
-terminal ASSIGN, PLUS, MINUS, MUL, DIV, PERCENT, INC, DEC, EQUAL, NOTEQUAL, GRATHER, GRATHEREQUAL, LESS, LESSEQUAL, AND, OR;
+terminal BREAK, RETURN, ENUM, CONST, LENGTH, IF, ELSE, NEW, PRINT, READ, VOID, CONTINUE, FOR, FOREACH, FINDANY, MAP;
+terminal ASSIGN, PLUS, MINUS, MUL, DIV, MOD, INC, DEC, EQUAL, NOTEQUAL, GREATER, GREATEREQUAL, LESS, LESSEQUAL, AND, OR, ARROW;
 terminal Integer NUMBER, BOOL;
 terminal Character CHARACTER;
 terminal String IDENT;
@@ -79,7 +79,6 @@ nonterminal StatementContinue StatementContinue;
 nonterminal Statements Statements;
 nonterminal OneStatement OneStatement;
 nonterminal ElseStatement ElseStatement;
-nonterminal CaseStatement CaseStatement;
 nonterminal DesignatorStatement DesignatorStatement;
 nonterminal ExprAddopContinue ExprAddopContinue;
 nonterminal ActPars ActPars;
@@ -93,8 +92,6 @@ nonterminal ActParsList ActParsList;
 nonterminal ConstAssign ConstAssign;
 nonterminal EnumName EnumName;
 nonterminal ActParsBegin ActParsBegin;
-nonterminal CaseLine CaseLine;
-nonterminal CaseBegin CaseBegin;
 nonterminal ForBegin ForBegin;
 nonterminal ForDS1 ForDS1;
 nonterminal ForCondition ForCondition;
@@ -103,6 +100,7 @@ nonterminal ElseBegin ElseBegin;
 nonterminal ForeachBegin ForeachBegin;
 nonterminal ForeachDS1 ForeachDS1;
 nonterminal ForeachDS2 ForeachDS2;
+nonterminal DesignatorMapBegin DesignatorMapBegin;
 nonterminal rs.etf.pp1.symboltable.concepts.Struct Factor, FactorReal, Term, Expr, ExpAddop, ExprNonTernary, ExprTernary, MulopList;
 nonterminal rs.etf.pp1.symboltable.concepts.Struct Condition,  CondTerm, CondFact, CondTermList, CondFactList;
 nonterminal rs.etf.pp1.symboltable.concepts.Obj Designator, DesignatorArrName, DesignatorArrLength;
@@ -231,8 +229,6 @@ OneStatement ::= (OneStatement_ds) DesignatorStatement:D1 SEMI {: RESULT=new One
 				  |
 				  (OneStatement_print2) PRINT LPARENT Expr:E1 COMMA NUMBER:N2 RPARENT SEMI {: RESULT=new OneStatement_print2(E1, N2); RESULT.setLine(E1left); :}
 				  |
-				  (OneStatement_switch) SWITCH LPARENT Expr:E1 RPARENT LBRACE CaseStatement:C2 RBRACE {: RESULT=new OneStatement_switch(E1, C2); RESULT.setLine(E1left); :}
-				  |
 				  (OneStatement_foreach) ForeachBegin:F1 LPARENT ForeachDS1:F2 COLON ForeachDS2:F3 RPARENT Statement:S4 {: RESULT=new OneStatement_foreach(F1, F2, F3, S4); RESULT.setLine(F1left); :}
 				  |
 				  (OneStatement_for) ForBegin:F1 LPARENT ForDS1:F2 SEMI ForCondition:F3 SEMI ForDS2:F4 RPARENT Statement:S5 {: RESULT=new OneStatement_for(F1, F2, F3, F4, S5); RESULT.setLine(F1left); :}
@@ -245,13 +241,7 @@ ElseStatement ::= (ElseStatement_yes) ElseBegin:E1 Statement:S2 {: RESULT=new El
 				  ;
 ElseBegin ::= (ElseBegin) ELSE {: RESULT=new ElseBegin(); :};
 				  
-CaseStatement ::= (CaseStatement_yes) CaseStatement:C1 CaseLine:C2 {: RESULT=new CaseStatement_yes(C1, C2); RESULT.setLine(C1left); :}
-				  |
-				  (CaseStatement_epsilon) {: RESULT=new CaseStatement_epsilon(); :}
-				  ;					  
-CaseLine ::= (CaseLine) CaseBegin:C1 NUMBER:N2 COLON StatementContinue:S3 {: RESULT=new CaseLine(C1, N2, S3); RESULT.setLine(C1left); :};
-CaseBegin ::= (CaseBegin) CASE {: RESULT=new CaseBegin(); :};
-			  
+
 ForBegin ::= (ForBegin) FOR {: RESULT=new ForBegin(); :};
 ForDS1 ::= (ForDS1_yes) DesignatorStatement:D1 {: RESULT=new ForDS1_yes(D1); RESULT.setLine(D1left); :}
 			|
@@ -371,10 +361,13 @@ Designator ::= (Designator_var) IDENT:I1 {: RESULT=new Designator_var(I1); RESUL
 				(Designator_length) DesignatorArrLength:D1 {: RESULT=new Designator_length(D1); RESULT.setLine(D1left); :}
 				|
 				(Designator_findAny) IDENT:I1 DOT FINDANY LPARENT Expr:E2 RPARENT {: RESULT=new Designator_findAny(I1, E2); RESULT.setLine(I1left); :}
+				|
+				(Designator_map) DesignatorMapBegin:D1 ARROW Expr:E2 RPARENT {: RESULT=new Designator_map(D1, E2); RESULT.setLine(D1left); :}
 				;
 
 DesignatorArrName ::= (DesignatorArrName) IDENT:I1 {: RESULT=new DesignatorArrName(I1); RESULT.setLine(I1left); :};
 DesignatorArrLength ::= (DesignatorArrLength) IDENT:I1 DOT LENGTH {: RESULT=new DesignatorArrLength(I1); RESULT.setLine(I1left); :};
+DesignatorMapBegin ::= (DesignatorMapBegin) IDENT:I1 DOT MAP LPARENT IDENT:I2 {: RESULT=new DesignatorMapBegin(I1, I2); RESULT.setLine(I1left); :};
 	
 	
 Assignop ::= (Assignop) ASSIGN {: RESULT=new Assignop(); :};
@@ -388,16 +381,16 @@ Mulop ::= (Mulop_m) MUL {: RESULT=new Mulop_m(); :}
 		  |		  
 		  (Mulop_d) DIV {: RESULT=new Mulop_d(); :}
 		  |
-		  (Mulop_pr) PERCENT {: RESULT=new Mulop_pr(); :}
+		  (Mulop_pr) MOD {: RESULT=new Mulop_pr(); :}
 		  ;
 		  	  
 Relop ::= (Relop_eq) EQUAL {: RESULT=new Relop_eq(); :}
 		|
 		(Relop_ne) NOTEQUAL {: RESULT=new Relop_ne(); :}
 		|
-		(Relop_gt) GRATHER {: RESULT=new Relop_gt(); :}
+		(Relop_gt) GREATER {: RESULT=new Relop_gt(); :}
 		|
-		(Relop_ge) GRATHEREQUAL {: RESULT=new Relop_ge(); :}
+		(Relop_ge) GREATEREQUAL {: RESULT=new Relop_ge(); :}
 		|
 		(Relop_lt) LESS {: RESULT=new Relop_lt(); :}
 		|

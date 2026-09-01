@@ -50,10 +50,9 @@ import java_cup.runtime.Symbol;
 "continue"	{ return new_symbol(sym.CONTINUE, yytext()); }
 "for"		{ return new_symbol(sym.FOR, yytext()); }
 "length"	{ return new_symbol(sym.LENGTH, yytext()); }
-"switch"	{ return new_symbol(sym.SWITCH, yytext()); }
-"case"		{ return new_symbol(sym.CASE, yytext()); }
 "enum"		{ return new_symbol(sym.ENUM, yytext()); }
 "findAny"	{ return new_symbol(sym.FINDANY, yytext()); }
+"map"		{ return new_symbol(sym.MAP, yytext()); }
 
 "+" 		{ return new_symbol(sym.PLUS, yytext()); }
 "-"			{ return new_symbol(sym.MINUS, yytext()); }
@@ -82,6 +81,7 @@ import java_cup.runtime.Symbol;
 "&&"		{ return new_symbol(sym.AND, yytext()); }
 "||"		{ return new_symbol(sym.OR, yytext()); }
 "?"			{ return new_symbol(sym.QUESTION, yytext()); }
+"=>"		{ return new_symbol(sym.ARROW, yytext()); }
 
 "//" 				{ yybegin(COMMENT); }
 <COMMENT> .			{ yybegin(COMMENT); }

@@ -31,14 +31,16 @@ public class SemAnalyzer extends VisitorAdaptor {
 	private boolean returnHappend = false;
 	private int petljeCnt = 0;
 	private boolean insideFor = false;
-	private boolean insideCase;
-	private int caseCnt = 0;
 	int nVars;  //da bi klasa Compile je dohvatila
 	
 	// findAny: skladiste skrivenih lokalnih promenljivih (brojac i mesto za pretragu) po AST cvoru,
 	// da bi CodeGenerator mogao da ih pronadje bez ponovnog Tab.find (posto se scope u toj fazi vise ne otvara)
 	static java.util.Map<Designator_findAny, Obj[]> findAnyTemps = new java.util.HashMap<>();
 	private int findAnyTempCounter = 0;
+	
+	// map: skladiste skrivenih lokalnih promenljivih (brojac i referenca novog niza) po AST cvoru
+	static java.util.Map<DesignatorMapBegin, Obj[]> mapTemps = new java.util.HashMap<>();
+	private int mapTempCounter = 0;
 	
 	private boolean ourAssignableTo(Struct s1, Struct s2) { // gledamo da li su s2 = s1
     	if(s1.assignableTo(s2)) return true;
@@ -449,6 +451,65 @@ public class SemAnalyzer extends VisitorAdaptor {
 		}
 	}
 	
+	@Override
+	public void visit(DesignatorMapBegin mapBegin) {
+		Obj arrObj = Tab.find(mapBegin.getI1());
+		Obj identObj = Tab.find(mapBegin.getI2());
+		Struct elemType = null;
+	
+		if (arrObj == Tab.noObj) {
+			report_error("[DesignatorMap] Pristupamo nedefinisanoj promenljivi niza: " + mapBegin.getI1(), mapBegin);
+		}
+		else if (arrObj.getKind() != Obj.Var || arrObj.getType().getKind() != Struct.Array) {
+			report_error("[DesignatorMap] " + mapBegin.getI1() + " nije niz", mapBegin);
+		}
+		else {
+			elemType = arrObj.getType().getElemType();
+			if (!elemType.equals(Tab.intType) && !elemType.equals(Tab.charType) && !elemType.equals(boolType)) {
+				report_error("[DesignatorMap] Niz " + mapBegin.getI1() + " nije ugradjenog tipa (int/char/bool)", mapBegin);
+				elemType = null;
+			}
+		}
+	
+		if (identObj == Tab.noObj) {
+			report_error("[DesignatorMap] Nepostojeca promenljiva: " + mapBegin.getI2(), mapBegin);
+			elemType = null;
+		}
+		else if (identObj.getKind() != Obj.Var) {
+			report_error("[DesignatorMap] " + mapBegin.getI2() + " nije promenljiva", mapBegin);
+			elemType = null;
+		}
+		else if (elemType != null && !identObj.getType().equals(elemType)) {
+			report_error("[DesignatorMap] Tip promenljive " + mapBegin.getI2() + " ne odgovara tipu elementa niza " + mapBegin.getI1(), mapBegin);
+			elemType = null;
+		}
+	
+		if (elemType != null) {
+			Obj counterObj = Tab.insert(Obj.Var, "$map$i$" + mapTempCounter, Tab.intType);
+			Obj newArrObj = Tab.insert(Obj.Var, "$map$arr$" + mapTempCounter, new Struct(Struct.Array, elemType));
+			mapTempCounter++;
+			mapTemps.put(mapBegin, new Obj[]{ counterObj, newArrObj, arrObj, identObj });
+		}
+	}
+	
+	@Override
+	public void visit(Designator_map designatorMap) {
+		Obj[] temps = mapTemps.get(designatorMap.getDesignatorMapBegin());
+		if (temps == null) {
+			designatorMap.obj = new Obj(Obj.Con, "map", Tab.noType);
+			return;
+		}
+	
+		Obj srcArrObj = temps[2];
+		Struct elemType = srcArrObj.getType().getElemType();
+	
+		if (!ourAssignableTo(designatorMap.getExpr().struct, elemType) && !ourAssignableTo(elemType, designatorMap.getExpr().struct)) {
+			report_error("[DesignatorMap] Neodgovarajuci tip izraza u map pozivu", designatorMap);
+		}
+	
+		designatorMap.obj = new Obj(Obj.Con, "map", srcArrObj.getType());
+	}
+	
 	//////////////////////////// Factor
 	@Override
 	public void visit(FactorReal_d factorDes) {
@@ -768,8 +829,8 @@ public class SemAnalyzer extends VisitorAdaptor {
 	
 	@Override
 	public void visit(OneStatement_break statementBreak) {
-		if(!insideFor && !insideCase) {
-			report_error("[StatementBreak] Break nije unutar for petlje ili case statement.", statementBreak);
+		if(!insideFor) {
+			report_error("[StatementBreak] Break nije unutar for petlje.", statementBreak);
 		}
 	}
 	
@@ -791,28 +852,6 @@ public class SemAnalyzer extends VisitorAdaptor {
 	public void visit(OneStatement_for statementFor) {
 		petljeCnt--;
 		if (petljeCnt == 0) insideFor = false;
-	}
-	
-	//////////// Case
-	@Override
-	public void visit(CaseBegin caseBegin) {
-		insideCase = true;
-		caseCnt ++;
-	}
-	
-	@Override
-	public void visit(CaseLine caseLine) {
-		caseCnt--;
-		if (caseCnt == 0) insideCase = false;
-	}
-	
-	@Override
-	public void visit(OneStatement_switch statementSwitch) {
-		if(!statementSwitch.getExpr().struct.equals(Tab.intType)
-			&& !(statementSwitch.getExpr().struct.getKind() == Struct.Enum)
-		) {
-			report_error("[StatementSwitch] Expr u switch nije int.", statementSwitch);
-		}
 	}
 	
 	//////////////////////////// Condition

@@ -8,6 +8,7 @@ import rs.ac.bg.etf.pp1.ast.*;
 import rs.etf.pp1.mj.runtime.Code;
 import rs.etf.pp1.symboltable.Tab;
 import rs.etf.pp1.symboltable.concepts.Obj;
+import rs.etf.pp1.symboltable.concepts.Struct;
 
 public class CodeGenerator extends VisitorAdaptor {
 
@@ -125,8 +126,9 @@ public class CodeGenerator extends VisitorAdaptor {
 	@Override
 	public void visit(FactorReal_d factor) {
 		fixupZaTernarniZaPocetakNaExpr2();
-		if (factor.getDesignator() instanceof Designator_length || factor.getDesignator() instanceof Designator_findAny)
-	        return; //  !!!da uradi skip loading array.length / findAny rezultat je vec na stacku!!!
+		if (factor.getDesignator() instanceof Designator_length || factor.getDesignator() instanceof Designator_findAny
+				|| factor.getDesignator() instanceof Designator_map)
+	        return; //  !!!da uradi skip loading array.length / findAny / map rezultat je vec na stacku!!!
 		
 		//za ovo pravimo visit, jer smo ga ovde tek pozvali
 		//ali npr gde radimo Designator = nesto, tu necemo jer to je store neki
@@ -231,6 +233,81 @@ public class CodeGenerator extends VisitorAdaptor {
 	
 		// zajednicka tacka - rezultat (0/1) je na stacku
 		Code.fixup(foundJmp);
+	}
+	
+	// map: DesignatorMapBegin generise sve pre Expr-a (alokacija novog niza, brojac, provera i < length,
+	// ident = niz[i], i priprema stek za store na kraju), tako da se Expr-ov kod izvrsava PONOVO svaki put
+	// kad se skoci nazad na loopStart (Expr fizicki sedi u petlji, izmedju ova dva visit-a)
+	private Stack<int[]> mapLoopInfo = new Stack<>();
+	
+	@Override
+	public void visit(DesignatorMapBegin mapBegin) {
+		fixupZaTernarniZaPocetakNaExpr2();
+	
+		Obj[] temps = SemAnalyzer.mapTemps.get(mapBegin);
+		if (temps == null) return; // semanticka greska je vec prijavljena
+	
+		Obj counterObj = temps[0];
+		Obj newArrObj = temps[1];
+		Obj srcArrObj = temps[2];
+		Obj identObj = temps[3];
+		Struct elemType = srcArrObj.getType().getElemType();
+	
+		// noviNiz = new elemType[srcNiz.length]
+		Code.load(srcArrObj);
+		Code.put(Code.arraylength);
+		Code.put(Code.newarray);
+		Code.put(elemType.equals(Tab.charType) ? 0 : 1);
+		Code.store(newArrObj);
+	
+		Code.loadConst(0);
+		Code.store(counterObj);	// i = 0
+	
+		int loopStart = Code.pc;
+		Code.load(counterObj);
+		Code.load(srcArrObj);
+		Code.put(Code.arraylength);
+		Code.putFalseJump(Code.lt, 0);	// ako i >= length -> gotovo
+		int doneJmp = Code.pc - 2;
+	
+		// ident = srcNiz[i]
+		Code.load(srcArrObj);
+		Code.load(counterObj);
+		Code.load(new Obj(Obj.Elem, "$map$read", elemType));
+		Code.store(identObj);
+	
+		// priprema za store noviNiz[i] = Expr posle sto se Expr izracuna (sledeci u obilasku)
+		Code.load(newArrObj);
+		Code.load(counterObj);
+	
+		mapLoopInfo.push(new int[]{ loopStart, doneJmp });
+	}
+	
+	@Override
+	public void visit(Designator_map designatorMap) {
+		Obj[] temps = SemAnalyzer.mapTemps.get(designatorMap.getDesignatorMapBegin());
+		if (temps == null) return; // semanticka greska je vec prijavljena
+	
+		Obj counterObj = temps[0];
+		Obj newArrObj = temps[1];
+		Obj srcArrObj = temps[2];
+		Struct elemType = srcArrObj.getType().getElemType();
+	
+		int[] loopInfo = mapLoopInfo.pop();
+		int loopStart = loopInfo[0];
+		int doneJmp = loopInfo[1];
+	
+		// stack: [ noviNiz, i, ExprValue ] -> noviNiz[i] = ExprValue
+		Code.store(new Obj(Obj.Elem, "$map$write", elemType));
+	
+		Code.load(counterObj);
+		Code.loadConst(1);
+		Code.put(Code.add);
+		Code.store(counterObj);	// i++
+		Code.putJump(loopStart);
+	
+		Code.fixup(doneJmp);
+		Code.load(newArrObj);	// rezultat map poziva - referenca na novi niz
 	}
 	
 	
@@ -513,39 +590,17 @@ public class CodeGenerator extends VisitorAdaptor {
 //	
 	@Override
 	public void visit(OneStatement_break statementBreak) {
-//		Code.putJump(0);  //bezuslovni skok, nzm gde nas baca
-//		breakJmp.peek().add(Code.pc - 2); //peek-dohvatimo listu sa vrha steka i dodamo
-	
 		Code.putJump(0);  
 		int adr = Code.pc - 2;
 		
-		if (!breakTargets.isEmpty() && "switch".equals(breakTargets.peek())) {
-	    	if (!switchBreakJmp.isEmpty()) {
-	    		switchBreakJmp.peek().add(adr);
-	    	}
-	    } 
-		else if (!forBreakJmp.isEmpty()) {
+		if (!forBreakJmp.isEmpty()) {
 	    	forBreakJmp.peek().add(adr);
 	    }
 	}
 	
 	@Override
 	public void visit(OneStatement_continue statementContinue) {
-//		Code.putJump(0);  //bezuslovni skok, nzm gde nas baca
-//		continueJmp.peek().add(Code.pc - 2); //peek-dohvatimo listu sa vrha steka i dodamo
-		
-		//za switch radimo ovde, da bi skinuli sa stacka njegov Expr, ako je switch bio u foru
-		int numOfSwitches = 0;
-	    SyntaxNode curr = statementContinue;
-	    while (curr != null) { //ugnjezdene switchevi, pa koliko da popuje
-	    	if (curr instanceof OneStatement_switch) numOfSwitches++;
-	    	curr = curr.getParent();
-	    }
-	    for (int i = 0; i < numOfSwitches; i++) {
-	    	Code.put(Code.pop);
-	    }
-	    
-	    //za for
+		//za for
 		if (!forContinueJmp.isEmpty()) {
 			Code.putJump(0);  
 			forContinueJmp.peek().add(Code.pc - 2); 
@@ -564,7 +619,7 @@ public class CodeGenerator extends VisitorAdaptor {
 	
 	private Stack<List<Integer>> forBreakJmp = new Stack<>();
 	private Stack<List<Integer>> forContinueJmp = new Stack<>();
-	private Stack<String> breakTargets = new Stack<>(); //jer mogu biti ili for ili switch za break
+	private Stack<String> breakTargets = new Stack<>(); //za sada samo "for"
 	
 	@Override
 	public void visit(ForBegin forBegin) {
@@ -689,106 +744,6 @@ public class CodeGenerator extends VisitorAdaptor {
 	    	breakTargets.pop();
 	    }
 	}
-	
-	
-	//  SWITCH  -nemam continue
-	private Stack<Integer> switchNextCaseJmp = new Stack<>();
-	private Stack<Integer> switchFallthroughCaseJump = new Stack<>(); //nastavak na sledeci po redu case, ako nije bio break
-	private Stack<OneStatement_switch> switchOwners = new Stack<>();
-	private Stack<List<Integer>> switchBreakJmp = new Stack<>();
-
-	private OneStatement_switch prviOkruzujuciSwitch(SyntaxNode node) {
-		SyntaxNode curr = node;
-		while (curr != null && !(curr instanceof OneStatement_switch)) {
-			curr = curr.getParent();
-		}
-		return (OneStatement_switch) curr;
-	}
-	
-	@Override
-	public void visit(CaseBegin caseBegin) {
-		OneStatement_switch owner = prviOkruzujuciSwitch(caseBegin);
-		if (owner != null && (switchOwners.isEmpty() || switchOwners.peek() != owner)) { //prvi case u switchu
-			switchOwners.push(owner);
-			switchBreakJmp.push(new ArrayList<>());
-			switchNextCaseJmp.push(-1);
-			switchFallthroughCaseJump.push(-1);
-			breakTargets.push("switch");
-		} //sad smo u switchu
-		
-		//da li sam ovaj case bas
-		if (!switchNextCaseJmp.isEmpty()) {
-			int adr = switchNextCaseJmp.peek();
-			if (adr != -1) {
-				Code.fixup(adr);
-				switchNextCaseJmp.pop();
-				switchNextCaseJmp.push(-1); //nemam sledeci na kome moram biti
-			}
-		}
-		
-		CaseLine cL = (CaseLine) caseBegin.getParent();
-		int caseVal = cL.getN2();  //uzeo je od case num
-		//duplira vred na stacku a to je num iz switch, da bi i dalje on bio tu
-		Code.put(Code.dup);  //switchVal
-		Code.loadConst(caseVal);
-		Code.putFalseJump(Code.eq, 0);  //dobro je ako jesu eq, pa ovo radi unutra ako je ne
-		switchNextCaseJmp.pop();
-		switchNextCaseJmp.push(Code.pc - 2);  //ako case nije pogodjen idi na sledeci case
-		
-		
-		//sledeci po redu case
-		if (!switchFallthroughCaseJump.isEmpty()) {
-			int adr = switchFallthroughCaseJump.peek();
-			if (adr != -1) {
-				Code.fixup(adr);
-				switchFallthroughCaseJump.pop();
-				switchFallthroughCaseJump.push(-1);
-			}
-		}
-	}
-	
-	@Override
-	public void visit(CaseLine caseLine) {
-		//kraj case, gledaj da li je u fallthrough, pocinje sl case ovde
-		//znaci nije bilo break
-		if (!switchFallthroughCaseJump.isEmpty()) {
-			Code.putJump(0);
-			switchFallthroughCaseJump.pop();
-			switchFallthroughCaseJump.push(Code.pc - 2);
-		}
-	}
-	
-	@Override
-	public void visit(OneStatement_switch statementSwitch) {
-		//kraj ovog switch
-		if (!switchOwners.isEmpty() && switchOwners.peek() == statementSwitch) {
-			int adr1 = switchNextCaseJmp.pop();
-			if (adr1 != -1) Code.fixup(adr1);
-			
-//			if (adr1 != -1) {
-//			int target = (switchDefaultAdr.peek() != -1) ? switchDefaultAdr.pop() : Code.pc;
-//		    Code.fixup(adr1, target);  // ili Code.fixup(adr1) ako si već postavio `Code.pc` na pravo mesto
-//			}
-//			switchDefaultAdr.pop();
-			
-			int adr2 = switchFallthroughCaseJump.pop();
-			if (adr2 != -1) Code.fixup(adr2);
-			
-			//breakovi na kraj switcha
-			List<Integer> breaksThisSwitch = switchBreakJmp.pop();
-			for (Integer c : breaksThisSwitch) {
-				Code.fixup(c);
-			}
-			
-			//sklanjamo ovaj switch
-			switchOwners.pop();
-			if (!breakTargets.isEmpty() && "switch".equals(breakTargets.peek())) {
-				breakTargets.pop();
-			}
-		}
-		Code.put(Code.pop); //sklanjanje switch Expr, na stacku je ostao broj
-	}
-	
 	
 }
 
