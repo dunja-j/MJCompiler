@@ -31,8 +31,6 @@ public class SemAnalyzer extends VisitorAdaptor {
 	private boolean returnHappend = false;
 	private int petljeCnt = 0;
 	private boolean insideFor = false;
-	private boolean insideCase;
-	private int caseCnt = 0;
 	int nVars;  //da bi klasa Compile je dohvatila
 	
 	// findAny: skladiste skrivenih lokalnih promenljivih (brojac i mesto za pretragu) po AST cvoru,
@@ -768,8 +766,8 @@ public class SemAnalyzer extends VisitorAdaptor {
 	
 	@Override
 	public void visit(OneStatement_break statementBreak) {
-		if(!insideFor && !insideCase) {
-			report_error("[StatementBreak] Break nije unutar for petlje ili case statement.", statementBreak);
+		if(!insideFor) {
+			report_error("[StatementBreak] Break nije unutar for petlje.", statementBreak);
 		}
 	}
 	
@@ -791,28 +789,6 @@ public class SemAnalyzer extends VisitorAdaptor {
 	public void visit(OneStatement_for statementFor) {
 		petljeCnt--;
 		if (petljeCnt == 0) insideFor = false;
-	}
-	
-	//////////// Case
-	@Override
-	public void visit(CaseBegin caseBegin) {
-		insideCase = true;
-		caseCnt ++;
-	}
-	
-	@Override
-	public void visit(CaseLine caseLine) {
-		caseCnt--;
-		if (caseCnt == 0) insideCase = false;
-	}
-	
-	@Override
-	public void visit(OneStatement_switch statementSwitch) {
-		if(!statementSwitch.getExpr().struct.equals(Tab.intType)
-			&& !(statementSwitch.getExpr().struct.getKind() == Struct.Enum)
-		) {
-			report_error("[StatementSwitch] Expr u switch nije int.", statementSwitch);
-		}
 	}
 	
 	//////////////////////////// Condition

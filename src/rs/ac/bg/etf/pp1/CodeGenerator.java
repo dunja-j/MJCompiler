@@ -513,39 +513,17 @@ public class CodeGenerator extends VisitorAdaptor {
 //	
 	@Override
 	public void visit(OneStatement_break statementBreak) {
-//		Code.putJump(0);  //bezuslovni skok, nzm gde nas baca
-//		breakJmp.peek().add(Code.pc - 2); //peek-dohvatimo listu sa vrha steka i dodamo
-	
 		Code.putJump(0);  
 		int adr = Code.pc - 2;
 		
-		if (!breakTargets.isEmpty() && "switch".equals(breakTargets.peek())) {
-	    	if (!switchBreakJmp.isEmpty()) {
-	    		switchBreakJmp.peek().add(adr);
-	    	}
-	    } 
-		else if (!forBreakJmp.isEmpty()) {
+		if (!forBreakJmp.isEmpty()) {
 	    	forBreakJmp.peek().add(adr);
 	    }
 	}
 	
 	@Override
 	public void visit(OneStatement_continue statementContinue) {
-//		Code.putJump(0);  //bezuslovni skok, nzm gde nas baca
-//		continueJmp.peek().add(Code.pc - 2); //peek-dohvatimo listu sa vrha steka i dodamo
-		
-		//za switch radimo ovde, da bi skinuli sa stacka njegov Expr, ako je switch bio u foru
-		int numOfSwitches = 0;
-	    SyntaxNode curr = statementContinue;
-	    while (curr != null) { //ugnjezdene switchevi, pa koliko da popuje
-	    	if (curr instanceof OneStatement_switch) numOfSwitches++;
-	    	curr = curr.getParent();
-	    }
-	    for (int i = 0; i < numOfSwitches; i++) {
-	    	Code.put(Code.pop);
-	    }
-	    
-	    //za for
+		//za for
 		if (!forContinueJmp.isEmpty()) {
 			Code.putJump(0);  
 			forContinueJmp.peek().add(Code.pc - 2); 
@@ -564,7 +542,7 @@ public class CodeGenerator extends VisitorAdaptor {
 	
 	private Stack<List<Integer>> forBreakJmp = new Stack<>();
 	private Stack<List<Integer>> forContinueJmp = new Stack<>();
-	private Stack<String> breakTargets = new Stack<>(); //jer mogu biti ili for ili switch za break
+	private Stack<String> breakTargets = new Stack<>(); //za sada samo "for"
 	
 	@Override
 	public void visit(ForBegin forBegin) {
@@ -689,106 +667,6 @@ public class CodeGenerator extends VisitorAdaptor {
 	    	breakTargets.pop();
 	    }
 	}
-	
-	
-	//  SWITCH  -nemam continue
-	private Stack<Integer> switchNextCaseJmp = new Stack<>();
-	private Stack<Integer> switchFallthroughCaseJump = new Stack<>(); //nastavak na sledeci po redu case, ako nije bio break
-	private Stack<OneStatement_switch> switchOwners = new Stack<>();
-	private Stack<List<Integer>> switchBreakJmp = new Stack<>();
-
-	private OneStatement_switch prviOkruzujuciSwitch(SyntaxNode node) {
-		SyntaxNode curr = node;
-		while (curr != null && !(curr instanceof OneStatement_switch)) {
-			curr = curr.getParent();
-		}
-		return (OneStatement_switch) curr;
-	}
-	
-	@Override
-	public void visit(CaseBegin caseBegin) {
-		OneStatement_switch owner = prviOkruzujuciSwitch(caseBegin);
-		if (owner != null && (switchOwners.isEmpty() || switchOwners.peek() != owner)) { //prvi case u switchu
-			switchOwners.push(owner);
-			switchBreakJmp.push(new ArrayList<>());
-			switchNextCaseJmp.push(-1);
-			switchFallthroughCaseJump.push(-1);
-			breakTargets.push("switch");
-		} //sad smo u switchu
-		
-		//da li sam ovaj case bas
-		if (!switchNextCaseJmp.isEmpty()) {
-			int adr = switchNextCaseJmp.peek();
-			if (adr != -1) {
-				Code.fixup(adr);
-				switchNextCaseJmp.pop();
-				switchNextCaseJmp.push(-1); //nemam sledeci na kome moram biti
-			}
-		}
-		
-		CaseLine cL = (CaseLine) caseBegin.getParent();
-		int caseVal = cL.getN2();  //uzeo je od case num
-		//duplira vred na stacku a to je num iz switch, da bi i dalje on bio tu
-		Code.put(Code.dup);  //switchVal
-		Code.loadConst(caseVal);
-		Code.putFalseJump(Code.eq, 0);  //dobro je ako jesu eq, pa ovo radi unutra ako je ne
-		switchNextCaseJmp.pop();
-		switchNextCaseJmp.push(Code.pc - 2);  //ako case nije pogodjen idi na sledeci case
-		
-		
-		//sledeci po redu case
-		if (!switchFallthroughCaseJump.isEmpty()) {
-			int adr = switchFallthroughCaseJump.peek();
-			if (adr != -1) {
-				Code.fixup(adr);
-				switchFallthroughCaseJump.pop();
-				switchFallthroughCaseJump.push(-1);
-			}
-		}
-	}
-	
-	@Override
-	public void visit(CaseLine caseLine) {
-		//kraj case, gledaj da li je u fallthrough, pocinje sl case ovde
-		//znaci nije bilo break
-		if (!switchFallthroughCaseJump.isEmpty()) {
-			Code.putJump(0);
-			switchFallthroughCaseJump.pop();
-			switchFallthroughCaseJump.push(Code.pc - 2);
-		}
-	}
-	
-	@Override
-	public void visit(OneStatement_switch statementSwitch) {
-		//kraj ovog switch
-		if (!switchOwners.isEmpty() && switchOwners.peek() == statementSwitch) {
-			int adr1 = switchNextCaseJmp.pop();
-			if (adr1 != -1) Code.fixup(adr1);
-			
-//			if (adr1 != -1) {
-//			int target = (switchDefaultAdr.peek() != -1) ? switchDefaultAdr.pop() : Code.pc;
-//		    Code.fixup(adr1, target);  // ili Code.fixup(adr1) ako si već postavio `Code.pc` na pravo mesto
-//			}
-//			switchDefaultAdr.pop();
-			
-			int adr2 = switchFallthroughCaseJump.pop();
-			if (adr2 != -1) Code.fixup(adr2);
-			
-			//breakovi na kraj switcha
-			List<Integer> breaksThisSwitch = switchBreakJmp.pop();
-			for (Integer c : breaksThisSwitch) {
-				Code.fixup(c);
-			}
-			
-			//sklanjamo ovaj switch
-			switchOwners.pop();
-			if (!breakTargets.isEmpty() && "switch".equals(breakTargets.peek())) {
-				breakTargets.pop();
-			}
-		}
-		Code.put(Code.pop); //sklanjanje switch Expr, na stacku je ostao broj
-	}
-	
 	
 }
 

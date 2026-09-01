@@ -50,7 +50,7 @@ scan with {:
 :}
 
 terminal PROG, LBRACE, RBRACE, LBRACKET, RBRACKET, LPARENT, RPARENT, SEMI, COMMA, COLON, QUESTION, DOT;
-terminal BREAK, RETURN, ENUM, CONST, LENGTH, IF, ELSE, NEW, PRINT, READ, VOID, CONTINUE, FOR, FOREACH, SWITCH, CASE, FINDANY;
+terminal BREAK, RETURN, ENUM, CONST, LENGTH, IF, ELSE, NEW, PRINT, READ, VOID, CONTINUE, FOR, FOREACH, FINDANY;
 terminal ASSIGN, PLUS, MINUS, MUL, DIV, MOD, INC, DEC, EQUAL, NOTEQUAL, GREATER, GREATEREQUAL, LESS, LESSEQUAL, AND, OR;
 terminal Integer NUMBER, BOOL;
 terminal Character CHARACTER;
@@ -58,11 +58,11 @@ terminal String IDENT;
 
 nonterminal Program, ProgramName, ConstVarEnumList, MethodList, ConstDecl, ConstValue, ConstContinue, VarDecl, VarVariable, VarContinue;
 nonterminal EnumDecl, EnumAssign, EnumContinue, FormPars, FormParsDeclaration, FormParsContinue, MethodDecl, MethodVarDecl;
-nonterminal Statement, StatementContinue, Statements, OneStatement, ElseStatement, CaseStatement, DesignatorStatement, ExprAddopContinue;
+nonterminal Statement, StatementContinue, Statements, OneStatement, ElseStatement, DesignatorStatement, ExprAddopContinue;
 nonterminal ActPars, ActParsContinue;
 nonterminal Assignop, Addop, Relop, Mulop, Unary, ActParsList;
 nonterminal ConstAssign, EnumName, ActParsBegin;
-nonterminal CaseLine, CaseBegin, ForBegin, ForDS1, ForCondition, ForDS2, ElseBegin, ForeachBegin, ForeachDS1, ForeachDS2;
+nonterminal ForBegin, ForDS1, ForCondition, ForDS2, ElseBegin, ForeachBegin, ForeachDS1, ForeachDS2;
 nonterminal rs.etf.pp1.symboltable.concepts.Struct Factor, FactorReal, Term, Expr, ExpAddop, ExprNonTernary, ExprTernary, MulopList;
 nonterminal rs.etf.pp1.symboltable.concepts.Struct Condition,  CondTerm, CondFact, CondTermList, CondFactList;
 nonterminal rs.etf.pp1.symboltable.concepts.Obj Designator, DesignatorArrName, DesignatorArrLength;
@@ -191,8 +191,6 @@ OneStatement ::= (OneStatement_ds) DesignatorStatement SEMI
 				  |
 				  (OneStatement_print2) PRINT LPARENT Expr COMMA NUMBER RPARENT SEMI
 				  |
-				  (OneStatement_switch) SWITCH LPARENT Expr RPARENT LBRACE CaseStatement RBRACE
-				  |
 				  (OneStatement_foreach) ForeachBegin LPARENT ForeachDS1 COLON ForeachDS2 RPARENT Statement
 				  |
 				  (OneStatement_for) ForBegin LPARENT ForDS1 SEMI ForCondition SEMI ForDS2 RPARENT Statement
@@ -205,13 +203,7 @@ ElseStatement ::= (ElseStatement_yes) ElseBegin Statement
 				  ;
 ElseBegin ::= (ElseBegin) ELSE;
 				  
-CaseStatement ::= (CaseStatement_yes) CaseStatement CaseLine
-				  |
-				  (CaseStatement_epsilon)
-				  ;					  
-CaseLine ::= (CaseLine) CaseBegin NUMBER COLON StatementContinue;
-CaseBegin ::= (CaseBegin) CASE;
-			  
+
 ForBegin ::= (ForBegin) FOR;
 ForDS1 ::= (ForDS1_yes) DesignatorStatement
 			|
