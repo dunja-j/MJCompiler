@@ -51,7 +51,7 @@ scan with {:
 
 terminal PROG, LBRACE, RBRACE, LBRACKET, RBRACKET, LPARENT, RPARENT, SEMI, COMMA, COLON, QUESTION, DOT;
 terminal BREAK, RETURN, ENUM, CONST, LENGTH, IF, ELSE, NEW, PRINT, READ, VOID, CONTINUE, FOR, FOREACH, SWITCH, CASE, FINDANY;
-terminal ASSIGN, PLUS, MINUS, MUL, DIV, PERCENT, INC, DEC, EQUAL, NOTEQUAL, GRATHER, GRATHEREQUAL, LESS, LESSEQUAL, AND, OR;
+terminal ASSIGN, PLUS, MINUS, MUL, DIV, MOD, INC, DEC, EQUAL, NOTEQUAL, GREATER, GREATEREQUAL, LESS, LESSEQUAL, AND, OR;
 terminal Integer NUMBER, BOOL;
 terminal Character CHARACTER;
 terminal String IDENT;
@@ -348,16 +348,16 @@ Mulop ::= (Mulop_m) MUL
 		  |		  
 		  (Mulop_d) DIV
 		  |
-		  (Mulop_pr) PERCENT
+		  (Mulop_pr) MOD
 		  ;
 		  	  
 Relop ::= (Relop_eq) EQUAL
 		|
 		(Relop_ne) NOTEQUAL
 		|
-		(Relop_gt) GRATHER
+		(Relop_gt) GREATER
 		|
-		(Relop_ge) GRATHEREQUAL
+		(Relop_ge) GREATEREQUAL
 		|
 		(Relop_lt) LESS
 		|

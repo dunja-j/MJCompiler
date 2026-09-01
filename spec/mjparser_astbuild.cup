@@ -51,7 +51,7 @@ scan with {:
 
 terminal PROG, LBRACE, RBRACE, LBRACKET, RBRACKET, LPARENT, RPARENT, SEMI, COMMA, COLON, QUESTION, DOT;
 terminal BREAK, RETURN, ENUM, CONST, LENGTH, IF, ELSE, NEW, PRINT, READ, VOID, CONTINUE, FOR, FOREACH, SWITCH, CASE, FINDANY;
-terminal ASSIGN, PLUS, MINUS, MUL, DIV, PERCENT, INC, DEC, EQUAL, NOTEQUAL, GRATHER, GRATHEREQUAL, LESS, LESSEQUAL, AND, OR;
+terminal ASSIGN, PLUS, MINUS, MUL, DIV, MOD, INC, DEC, EQUAL, NOTEQUAL, GREATER, GREATEREQUAL, LESS, LESSEQUAL, AND, OR;
 terminal Integer NUMBER, BOOL;
 terminal Character CHARACTER;
 terminal String IDENT;
@@ -388,16 +388,16 @@ Mulop ::= (Mulop_m) MUL {: RESULT=new Mulop_m(); :}
 		  |		  
 		  (Mulop_d) DIV {: RESULT=new Mulop_d(); :}
 		  |
-		  (Mulop_pr) PERCENT {: RESULT=new Mulop_pr(); :}
+		  (Mulop_pr) MOD {: RESULT=new Mulop_pr(); :}
 		  ;
 		  	  
 Relop ::= (Relop_eq) EQUAL {: RESULT=new Relop_eq(); :}
 		|
 		(Relop_ne) NOTEQUAL {: RESULT=new Relop_ne(); :}
 		|
-		(Relop_gt) GRATHER {: RESULT=new Relop_gt(); :}
+		(Relop_gt) GREATER {: RESULT=new Relop_gt(); :}
 		|
-		(Relop_ge) GRATHEREQUAL {: RESULT=new Relop_ge(); :}
+		(Relop_ge) GREATEREQUAL {: RESULT=new Relop_ge(); :}
 		|
 		(Relop_lt) LESS {: RESULT=new Relop_lt(); :}
 		|
