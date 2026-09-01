@@ -38,6 +38,10 @@ public class SemAnalyzer extends VisitorAdaptor {
 	static java.util.Map<Designator_findAny, Obj[]> findAnyTemps = new java.util.HashMap<>();
 	private int findAnyTempCounter = 0;
 	
+	// map: skladiste skrivenih lokalnih promenljivih (brojac i referenca novog niza) po AST cvoru
+	static java.util.Map<DesignatorMapBegin, Obj[]> mapTemps = new java.util.HashMap<>();
+	private int mapTempCounter = 0;
+	
 	private boolean ourAssignableTo(Struct s1, Struct s2) { // gledamo da li su s2 = s1
     	if(s1.assignableTo(s2)) return true;
     	else if(s2.getKind() == Struct.Int && s1.getKind() == Struct.Enum) return true;
@@ -445,6 +449,65 @@ public class SemAnalyzer extends VisitorAdaptor {
 			findAnyTempCounter++;
 			findAnyTemps.put(findAny, new Obj[]{ counterObj, searchValObj, arrObj });
 		}
+	}
+	
+	@Override
+	public void visit(DesignatorMapBegin mapBegin) {
+		Obj arrObj = Tab.find(mapBegin.getI1());
+		Obj identObj = Tab.find(mapBegin.getI2());
+		Struct elemType = null;
+	
+		if (arrObj == Tab.noObj) {
+			report_error("[DesignatorMap] Pristupamo nedefinisanoj promenljivi niza: " + mapBegin.getI1(), mapBegin);
+		}
+		else if (arrObj.getKind() != Obj.Var || arrObj.getType().getKind() != Struct.Array) {
+			report_error("[DesignatorMap] " + mapBegin.getI1() + " nije niz", mapBegin);
+		}
+		else {
+			elemType = arrObj.getType().getElemType();
+			if (!elemType.equals(Tab.intType) && !elemType.equals(Tab.charType) && !elemType.equals(boolType)) {
+				report_error("[DesignatorMap] Niz " + mapBegin.getI1() + " nije ugradjenog tipa (int/char/bool)", mapBegin);
+				elemType = null;
+			}
+		}
+	
+		if (identObj == Tab.noObj) {
+			report_error("[DesignatorMap] Nepostojeca promenljiva: " + mapBegin.getI2(), mapBegin);
+			elemType = null;
+		}
+		else if (identObj.getKind() != Obj.Var) {
+			report_error("[DesignatorMap] " + mapBegin.getI2() + " nije promenljiva", mapBegin);
+			elemType = null;
+		}
+		else if (elemType != null && !identObj.getType().equals(elemType)) {
+			report_error("[DesignatorMap] Tip promenljive " + mapBegin.getI2() + " ne odgovara tipu elementa niza " + mapBegin.getI1(), mapBegin);
+			elemType = null;
+		}
+	
+		if (elemType != null) {
+			Obj counterObj = Tab.insert(Obj.Var, "$map$i$" + mapTempCounter, Tab.intType);
+			Obj newArrObj = Tab.insert(Obj.Var, "$map$arr$" + mapTempCounter, new Struct(Struct.Array, elemType));
+			mapTempCounter++;
+			mapTemps.put(mapBegin, new Obj[]{ counterObj, newArrObj, arrObj, identObj });
+		}
+	}
+	
+	@Override
+	public void visit(Designator_map designatorMap) {
+		Obj[] temps = mapTemps.get(designatorMap.getDesignatorMapBegin());
+		if (temps == null) {
+			designatorMap.obj = new Obj(Obj.Con, "map", Tab.noType);
+			return;
+		}
+	
+		Obj srcArrObj = temps[2];
+		Struct elemType = srcArrObj.getType().getElemType();
+	
+		if (!ourAssignableTo(designatorMap.getExpr().struct, elemType) && !ourAssignableTo(elemType, designatorMap.getExpr().struct)) {
+			report_error("[DesignatorMap] Neodgovarajuci tip izraza u map pozivu", designatorMap);
+		}
+	
+		designatorMap.obj = new Obj(Obj.Con, "map", srcArrObj.getType());
 	}
 	
 	//////////////////////////// Factor
