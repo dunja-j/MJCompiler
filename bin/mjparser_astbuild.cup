@@ -50,8 +50,8 @@ scan with {:
 :}
 
 terminal PROG, LBRACE, RBRACE, LBRACKET, RBRACKET, LPARENT, RPARENT, SEMI, COMMA, COLON, QUESTION, DOT;
-terminal BREAK, RETURN, ENUM, CONST, LENGTH, IF, ELSE, NEW, PRINT, READ, VOID, CONTINUE, FOR, FOREACH, FINDANY;
-terminal ASSIGN, PLUS, MINUS, MUL, DIV, MOD, INC, DEC, EQUAL, NOTEQUAL, GREATER, GREATEREQUAL, LESS, LESSEQUAL, AND, OR;
+terminal BREAK, RETURN, ENUM, CONST, LENGTH, IF, ELSE, NEW, PRINT, READ, VOID, CONTINUE, FOR, FOREACH, FINDANY, MAP;
+terminal ASSIGN, PLUS, MINUS, MUL, DIV, MOD, INC, DEC, EQUAL, NOTEQUAL, GREATER, GREATEREQUAL, LESS, LESSEQUAL, AND, OR, ARROW;
 terminal Integer NUMBER, BOOL;
 terminal Character CHARACTER;
 terminal String IDENT;
@@ -100,6 +100,7 @@ nonterminal ElseBegin ElseBegin;
 nonterminal ForeachBegin ForeachBegin;
 nonterminal ForeachDS1 ForeachDS1;
 nonterminal ForeachDS2 ForeachDS2;
+nonterminal DesignatorMapBegin DesignatorMapBegin;
 nonterminal rs.etf.pp1.symboltable.concepts.Struct Factor, FactorReal, Term, Expr, ExpAddop, ExprNonTernary, ExprTernary, MulopList;
 nonterminal rs.etf.pp1.symboltable.concepts.Struct Condition,  CondTerm, CondFact, CondTermList, CondFactList;
 nonterminal rs.etf.pp1.symboltable.concepts.Obj Designator, DesignatorArrName, DesignatorArrLength;
@@ -360,10 +361,13 @@ Designator ::= (Designator_var) IDENT:I1 {: RESULT=new Designator_var(I1); RESUL
 				(Designator_length) DesignatorArrLength:D1 {: RESULT=new Designator_length(D1); RESULT.setLine(D1left); :}
 				|
 				(Designator_findAny) IDENT:I1 DOT FINDANY LPARENT Expr:E2 RPARENT {: RESULT=new Designator_findAny(I1, E2); RESULT.setLine(I1left); :}
+				|
+				(Designator_map) DesignatorMapBegin:D1 ARROW Expr:E2 RPARENT {: RESULT=new Designator_map(D1, E2); RESULT.setLine(D1left); :}
 				;
 
 DesignatorArrName ::= (DesignatorArrName) IDENT:I1 {: RESULT=new DesignatorArrName(I1); RESULT.setLine(I1left); :};
 DesignatorArrLength ::= (DesignatorArrLength) IDENT:I1 DOT LENGTH {: RESULT=new DesignatorArrLength(I1); RESULT.setLine(I1left); :};
+DesignatorMapBegin ::= (DesignatorMapBegin) IDENT:I1 DOT MAP LPARENT IDENT:I2 {: RESULT=new DesignatorMapBegin(I1, I2); RESULT.setLine(I1left); :};
 	
 	
 Assignop ::= (Assignop) ASSIGN {: RESULT=new Assignop(); :};

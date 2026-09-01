@@ -50,8 +50,8 @@ scan with {:
 :}
 
 terminal PROG, LBRACE, RBRACE, LBRACKET, RBRACKET, LPARENT, RPARENT, SEMI, COMMA, COLON, QUESTION, DOT;
-terminal BREAK, RETURN, ENUM, CONST, LENGTH, IF, ELSE, NEW, PRINT, READ, VOID, CONTINUE, FOR, FOREACH, FINDANY;
-terminal ASSIGN, PLUS, MINUS, MUL, DIV, MOD, INC, DEC, EQUAL, NOTEQUAL, GREATER, GREATEREQUAL, LESS, LESSEQUAL, AND, OR;
+terminal BREAK, RETURN, ENUM, CONST, LENGTH, IF, ELSE, NEW, PRINT, READ, VOID, CONTINUE, FOR, FOREACH, FINDANY, MAP;
+terminal ASSIGN, PLUS, MINUS, MUL, DIV, MOD, INC, DEC, EQUAL, NOTEQUAL, GREATER, GREATEREQUAL, LESS, LESSEQUAL, AND, OR, ARROW;
 terminal Integer NUMBER, BOOL;
 terminal Character CHARACTER;
 terminal String IDENT;
@@ -62,7 +62,7 @@ nonterminal Statement, StatementContinue, Statements, OneStatement, ElseStatemen
 nonterminal ActPars, ActParsContinue;
 nonterminal Assignop, Addop, Relop, Mulop, Unary, ActParsList;
 nonterminal ConstAssign, EnumName, ActParsBegin;
-nonterminal ForBegin, ForDS1, ForCondition, ForDS2, ElseBegin, ForeachBegin, ForeachDS1, ForeachDS2;
+nonterminal ForBegin, ForDS1, ForCondition, ForDS2, ElseBegin, ForeachBegin, ForeachDS1, ForeachDS2, DesignatorMapBegin;
 nonterminal rs.etf.pp1.symboltable.concepts.Struct Factor, FactorReal, Term, Expr, ExpAddop, ExprNonTernary, ExprTernary, MulopList;
 nonterminal rs.etf.pp1.symboltable.concepts.Struct Condition,  CondTerm, CondFact, CondTermList, CondFactList;
 nonterminal rs.etf.pp1.symboltable.concepts.Obj Designator, DesignatorArrName, DesignatorArrLength;
@@ -323,10 +323,13 @@ Designator ::= (Designator_var) IDENT
 				(Designator_length) DesignatorArrLength
 				|
 				(Designator_findAny) IDENT DOT FINDANY LPARENT Expr RPARENT
+				|
+				(Designator_map) DesignatorMapBegin ARROW Expr RPARENT
 				;
 
 DesignatorArrName ::= (DesignatorArrName) IDENT;
 DesignatorArrLength ::= (DesignatorArrLength) IDENT DOT LENGTH;
+DesignatorMapBegin ::= (DesignatorMapBegin) IDENT DOT MAP LPARENT IDENT;
 	
 	
 Assignop ::= (Assignop) ASSIGN;
