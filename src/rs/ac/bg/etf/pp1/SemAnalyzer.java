@@ -46,6 +46,10 @@ public class SemAnalyzer extends VisitorAdaptor {
 	// static java.util.Map<Designator_count, Obj[]> countTemps = new java.util.HashMap<>();
 	// private int countTempCounter = 0;
 	
+	// fromEnd (niz[^Expr]): skladiste skrivenog indeksa po AST cvoru
+	static java.util.Map<FactorReal_fromEnd, Obj> fromEndTemps = new java.util.HashMap<>();
+	private int fromEndTempCounter = 0;
+	
 	private boolean ourAssignableTo(Struct s1, Struct s2) { // gledamo da li su s2 = s1
     	if(s1.assignableTo(s2)) return true;
     	else if(s2.getKind() == Struct.Int && s1.getKind() == Struct.Enum) return true;
@@ -602,6 +606,33 @@ public class SemAnalyzer extends VisitorAdaptor {
 			factorAt.struct = Tab.noType;
 		}
 		else factorAt.struct = Tab.intType;
+	}
+	
+	@Override
+	public void visit(FactorReal_fromEnd factorFromEnd) { // niz[^Expr]
+		Obj arrObj = factorFromEnd.getDesignatorArrName().obj;
+		Struct elemType = null;
+	
+		if (arrObj != Tab.noObj) {
+			elemType = arrObj.getType().getElemType();
+			if (!elemType.equals(Tab.intType) && !elemType.equals(Tab.charType) && !elemType.equals(boolType)) {
+				report_error("[FactorRealFromEnd] Niz nije ugradjenog tipa (int/char/bool)", factorFromEnd);
+				elemType = null;
+			}
+		}
+	
+		if (!factorFromEnd.getExpr().struct.equals(Tab.intType)) {
+			report_error("[FactorRealFromEnd] Indeks od kraja mora biti int", factorFromEnd);
+			elemType = null;
+		}
+	
+		factorFromEnd.struct = (elemType != null) ? elemType : Tab.noType;
+	
+		if (elemType != null) {
+			Obj idxObj = Tab.insert(Obj.Var, "$fe$i$" + fromEndTempCounter, Tab.intType);
+			fromEndTempCounter++;
+			fromEndTemps.put(factorFromEnd, idxObj);
+		}
 	}
 	
 	@Override

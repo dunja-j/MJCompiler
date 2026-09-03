@@ -155,6 +155,31 @@ public class CodeGenerator extends VisitorAdaptor {
 	}
 	
 	@Override
+	public void visit(FactorReal_fromEnd factorFromEnd) { // niz[^Expr] = niz[duzina - Expr]
+		fixupZaTernarniZaPocetakNaExpr2();
+	
+		Obj idxObj = SemAnalyzer.fromEndTemps.get(factorFromEnd);
+		if (idxObj == null) return; // semanticka greska je vec prijavljena
+	
+		Obj arrObj = factorFromEnd.getDesignatorArrName().obj;
+		Struct elemType = arrObj.getType().getElemType();
+	
+		// stack: [ arrRef (automatski ucitan preko DesignatorArrName), ExprValue ]
+		Code.store(idxObj);          // idxObj = Expr (offset od kraja)
+		Code.put(Code.pop);          // odbacujemo automatski ucitanu referencu niza
+	
+		Code.load(arrObj);
+		Code.put(Code.arraylength);  // stack: [ duzina ]
+		Code.load(idxObj);           // stack: [ duzina, offset ]
+		Code.put(Code.sub);          // stack: [ duzina - offset ]  <- stvarni indeks
+		Code.store(idxObj);          // idxObj sada cuva stvarni indeks
+	
+		Code.load(arrObj);
+		Code.load(idxObj);
+		Code.load(new Obj(Obj.Elem, "$fe$elem", elemType)); // niz[idxObj]
+	}
+	
+	@Override
 	public void visit(FactorReal_method factor) {
 		fixupZaTernarniZaPocetakNaExpr2();
 		// mora offset jer call inc pc, i mora se pre call racunati
