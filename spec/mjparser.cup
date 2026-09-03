@@ -51,7 +51,7 @@ scan with {:
 
 terminal PROG, LBRACE, RBRACE, LBRACKET, RBRACKET, LPARENT, RPARENT, SEMI, COMMA, COLON, QUESTION, DOT;
 terminal BREAK, RETURN, ENUM, CONST, LENGTH, IF, ELSE, NEW, PRINT, READ, VOID, CONTINUE, FOR, FOREACH, FINDANY, MAP;
-terminal ASSIGN, PLUS, MINUS, MUL, DIV, MOD, INC, DEC, EQUAL, NOTEQUAL, GREATER, GREATEREQUAL, LESS, LESSEQUAL, AND, OR, ARROW, AT, HAT;
+terminal ASSIGN, PLUS, MINUS, MUL, DIV, MOD, INC, INC2, DEC, EQUAL, NOTEQUAL, GREATER, GREATEREQUAL, LESS, LESSEQUAL, AND, OR, ARROW, AT, HAT;
 terminal Integer NUMBER, BOOL;
 terminal Character CHARACTER;
 terminal String IDENT;
@@ -267,6 +267,8 @@ DesignatorStatement ::= (DesignatorStatement_assign) Designator Assignop Expr
 			 		(DesignatorStatement_method) Designator LPARENT ActParsList RPARENT
 			 		|
 			 		(DesignatorStatement_inc) Designator INC
+			 		|
+			 		(DesignatorStatement_inc2) Designator INC2
 			 		|
 			 		(DesignatorStatement_dec) Designator DEC
 			 		;

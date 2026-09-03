@@ -801,6 +801,18 @@ public class SemAnalyzer extends VisitorAdaptor {
 	}
 	
 	@Override
+	public void visit(DesignatorStatement_inc2 dsInc2) { // Designator+++ (uvecanje za 2)
+		int kindDS = dsInc2.getDesignator().obj.getKind();
+	
+		if (kindDS != Obj.Var && kindDS != Obj.Elem) {
+			report_error("[DesignatorStatementInc2] Inkrementiranje neadekvatne promenljive: " + dsInc2.getDesignator().obj.getName(), dsInc2);
+		}
+		else if (!dsInc2.getDesignator().obj.getType().equals(Tab.intType)) {
+			report_error("[DesignatorStatementInc2] Inkrementiranje not int promenljive: " + dsInc2.getDesignator().obj.getName(), dsInc2);
+		}
+	}
+	
+	@Override
 	public void visit(DesignatorStatement_dec dsDec) {
 		int kindDS = dsDec.getDesignator().obj.getKind();
 	

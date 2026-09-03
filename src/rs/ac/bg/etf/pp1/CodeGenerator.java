@@ -367,6 +367,18 @@ public class CodeGenerator extends VisitorAdaptor {
 	}
 	
 	@Override
+	public void visit(DesignatorStatement_inc2 dsInc2) { // Designator+++ = Designator = Designator + 2
+		if (dsInc2.getDesignator().obj.getKind() == Obj.Elem) {
+			Code.put(Code.dup2);
+		}
+		
+		Code.load(dsInc2.getDesignator().obj); 
+		Code.loadConst(2);
+		Code.put(Code.add);
+		Code.store(dsInc2.getDesignator().obj);
+	}
+	
+	@Override
 	public void visit(DesignatorStatement_dec dsDec) {
 		if (dsDec.getDesignator().obj.getKind() == Obj.Elem) {
 			Code.put(Code.dup2);
