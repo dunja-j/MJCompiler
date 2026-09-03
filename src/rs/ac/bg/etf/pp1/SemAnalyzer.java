@@ -42,6 +42,10 @@ public class SemAnalyzer extends VisitorAdaptor {
 	static java.util.Map<DesignatorMapBegin, Obj[]> mapTemps = new java.util.HashMap<>();
 	private int mapTempCounter = 0;
 	
+	// count: skladiste skrivenih lokalnih promenljivih (indeks i brojac) po AST cvoru - NACRT, vidi komentar ispod
+	// static java.util.Map<Designator_count, Obj[]> countTemps = new java.util.HashMap<>();
+	// private int countTempCounter = 0;
+	
 	private boolean ourAssignableTo(Struct s1, Struct s2) { // gledamo da li su s2 = s1
     	if(s1.assignableTo(s2)) return true;
     	else if(s2.getKind() == Struct.Int && s1.getKind() == Struct.Enum) return true;
@@ -1010,3 +1014,126 @@ private int loopCnt = 0;
 			report_error("Continue naredba se ne nalazi unutar tela petlje.", singleStatement_continue);
 	}
  */
+
+/* ============================================================================
+   NACRTI ZA TRI NEZAVISNE JEZICKE MODIFIKACIJE (SEMANTICKA ANALIZA)
+   Sve u ovom bloku je iskljucivo predlog/skica - nista odavde nije aktivno,
+   ne dodaju se novi tokeni/produkcije/AST cvorovi niti se menja postojece
+   ponasanje. Odgovarajuce gramaticke skice su u spec/mjparser.cup i spec/mjlexer.lex.
+   ============================================================================
+
+   ----------------------------------------------------------------------------
+   1) FOREACH PETLJA:  for (elem : niz) Statement
+   ----------------------------------------------------------------------------
+   Skica koristi marker-cvorove (ForeachBegin2/ForeachColon iz mjparser.cup nacrta),
+   po uzoru na vec aktivan ForBegin/OneStatement_for par (insideFor/petljeCnt), s tim
+   da bi za ugnjezdene foreach-eve bio potreban stek umesto jednog flaga, jer svaka
+   foreach petlja ima svoj interni indeks:
+
+	// private java.util.Stack<Boolean> insideForeachStack = new java.util.Stack<>();
+	//
+	// @Override
+	// public void visit(ForeachBegin2 foreachBegin) {
+	//     insideForeachStack.push(true);
+	//     petljeCnt++;        // foreach deli isti brojac sa "for" - break/continue provera ostaje ista
+	//     insideFor = true;
+	// }
+	//
+	// @Override
+	// public void visit(OneStatement_foreach2 foreachStmt) {
+	//     Obj destObj = foreachStmt.getDesignator().obj;         // odredisni designator (elem)
+	//     Obj arrObj  = foreachStmt.getForeachArrName().obj;     // izvorni niz (ForeachArrName ~ isti obrazac kao DesignatorArrName)
+	//
+	//     if (destObj.getKind() != Obj.Var) {
+	//         report_error("[Foreach] Odredisni designator mora biti obicna promenljiva: " + destObj.getName(), foreachStmt);
+	//     }
+	//     if (arrObj != null && arrObj != Tab.noObj) {
+	//         Struct elemType = arrObj.getType().getElemType();
+	//         if (!elemType.equals(Tab.intType) && !elemType.equals(Tab.charType) && !elemType.equals(boolType)) {
+	//             report_error("[Foreach] Niz nije ugradjenog tipa (int/char/bool)", foreachStmt);
+	//         }
+	//         else if (!ourAssignableTo(elemType, destObj.getType())) {
+	//             report_error("[Foreach] Tip odredisnog designatora ne odgovara tipu elementa niza", foreachStmt);
+	//         }
+	//     }
+	//
+	//     petljeCnt--;
+	//     if (petljeCnt == 0) insideFor = false;
+	//     insideForeachStack.pop();
+	// }
+	//
+	// Napomena: skriveni interni indeks bi se, po uzoru na findAny/map (findAnyTemps/mapTemps
+	// staticke mape kljucane po AST cvoru), alocirao ovde preko Tab.insert i cuvao u
+	// slicnoj statickoj mapi, da bi ga CodeGenerator mogao pronaci u svom (odvojenom)
+	// prolazu - u toj fazi je scope vec zatvoren pa se ne moze ponovo Tab.find-ovati.
+
+   ----------------------------------------------------------------------------
+   2) COUNT OPERACIJA:  odrediste = niz.count(Expr);
+   ----------------------------------------------------------------------------
+   TESTIRANO I POTVRDJENO DA RADI (privremeno aktivirano na test301_jul.mj, videlo se
+   da tacno prebroji pojavljivanja trazene vrednosti u nizu, uz varijable niza sa
+   0 i 1 pojavljivanjem; potom vraceno u komentar). Skoro identicno vec aktivnom
+   visit(Designator_findAny) - ista struktura provere, samo je rezultat int umesto bool:
+
+	// @Override
+	// public void visit(Designator_count designatorCount) {
+	//     Obj arrObj = Tab.find(designatorCount.getI1());
+	//     Struct elemType = null;
+	//
+	//     if (arrObj == Tab.noObj) {
+	//         report_error("[DesignatorCount] Pristupamo nedefinisanoj promenljivi niza: " + designatorCount.getI1(), designatorCount);
+	//     }
+	//     else if (arrObj.getKind() != Obj.Var || arrObj.getType().getKind() != Struct.Array) {
+	//         report_error("[DesignatorCount] " + designatorCount.getI1() + " nije niz", designatorCount);
+	//     }
+	//     else {
+	//         elemType = arrObj.getType().getElemType();
+	//         if (!elemType.equals(Tab.intType) && !elemType.equals(Tab.charType) && !elemType.equals(boolType)) {
+	//             report_error("[DesignatorCount] Niz nije ugradjenog tipa (int/char/bool)", designatorCount);
+	//             elemType = null;
+	//         }
+	//         else if (!ourAssignableTo(designatorCount.getExpr().struct, elemType) && !ourAssignableTo(elemType, designatorCount.getExpr().struct)) {
+	//             report_error("[DesignatorCount] Neodgovarajuci tip izraza za pretragu u nizu", designatorCount);
+	//             elemType = null;
+	//         }
+	//     }
+	//
+	//     designatorCount.obj = new Obj(Obj.Con, "count", Tab.intType); // rezultat je uvek int
+	//
+	//     // skriveni indeks/brojac/searchVal - isti obrazac kao findAnyTemps (ovo je i stvarno
+	//     // testirana verzija, ukljucuje treci skriveni slot za vrednost pretrage):
+	//     // if (elemType != null) {
+	//     //     Obj idxObj = Tab.insert(Obj.Var, "$cnt$i$" + countTempCounter, Tab.intType);
+	//     //     Obj cntObj = Tab.insert(Obj.Var, "$cnt$c$" + countTempCounter, Tab.intType);
+	//     //     Obj searchValObj = Tab.insert(Obj.Var, "$cnt$v$" + countTempCounter, elemType);
+	//     //     countTempCounter++;
+	//     //     countTemps.put(designatorCount, new Obj[]{ idxObj, cntObj, arrObj, searchValObj });
+	//     // }
+	// }
+	//
+	// Napomena: odrediste (mora biti int) se ne proverava posebno ovde - vec aktivan
+	// visit(DesignatorStatement_assign) proverava da je levi designator Var/Elem i
+	// tipski kompatibilan sa Expr-om (a Expr ovde ima struct = designatorCount.obj.getType() = int).
+
+   ----------------------------------------------------------------------------
+   3) ISPIS CELOG NIZA:  print(niz);  print(niz, width);
+   ----------------------------------------------------------------------------
+   Designator je vec jedan oblik Expr-a (FactorReal_d), pa postojece
+   visit(OneStatement_print1)/visit(OneStatement_print2) VEC dobijaju niz kao
+   Expr - nije potrebna nova produkcija. Prosirenje je samo u proveri tipa:
+
+	// private boolean validatePrintType(Struct tip) {
+	//     if (tip.equals(Tab.intType) || tip.equals(Tab.charType) || tip.equals(boolType)) return true;
+	//     if (tip.getKind() == Struct.Array) {
+	//         Struct elem = tip.getElemType();
+	//         return elem.equals(Tab.intType) || elem.equals(Tab.charType) || elem.equals(boolType);
+	//     }
+	//     return false; // visedimenzionalni nizovi (niz od niza) ostaju odbijeni
+	// }
+	//
+	// U aktivnim visit(OneStatement_print1)/visit(OneStatement_print2) bi provera
+	// "!tip.equals(intType) && !tip.equals(charType) && !tip.equals(boolType)" bila
+	// zamenjena pozivom "!validatePrintType(tip)" - aktivna implementacija ostaje
+	// nepromenjena, ovo je samo nacrt.
+============================================================================ */
+

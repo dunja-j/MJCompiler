@@ -107,6 +107,11 @@ nonterminal rs.etf.pp1.symboltable.concepts.Obj Designator, DesignatorArrName, D
 nonterminal rs.etf.pp1.symboltable.concepts.Obj MethodTypeAndName;
 nonterminal rs.etf.pp1.symboltable.concepts.Struct Type;
 
+/* NACRT (komentarisano, neaktivno): terminal za "count" operaciju nad nizom, isti obrazac kao FINDANY/MAP.
+   Testirano i potvrdjeno da radi (privremeno aktivirano, zatim vraceno kao komentar).
+terminal COUNT;
+*/
+
 precedence left ELSE;
 
 
@@ -229,6 +234,11 @@ OneStatement ::= (OneStatement_ds) DesignatorStatement:D1 SEMI {: RESULT=new One
 				  |
 				  (OneStatement_print2) PRINT LPARENT Expr:E1 COMMA NUMBER:N2 RPARENT SEMI {: RESULT=new OneStatement_print2(E1, N2); RESULT.setLine(E1left); :}
 				  |
+				  /* NAPOMENA (za nacrt ispisa celog niza): Designator je vec jedan oblik Expr-a
+				     (FactorReal_d), pa print(niz) i print(niz, width) VEC prolaze kroz ove
+				     dve postojece produkcije - nije potrebna nova PRINT '(' Designator ')'
+				     produkcija (i ne bi trebalo, jer bi se preklopila sa PRINT '(' Expr ')'
+				     i napravila parser konflikt). Sve ostaje na semantici/generisanju koda. */
 				  (OneStatement_foreach) ForeachBegin:F1 LPARENT ForeachDS1:F2 COLON ForeachDS2:F3 RPARENT Statement:S4 {: RESULT=new OneStatement_foreach(F1, F2, F3, S4); RESULT.setLine(F1left); :}
 				  |
 				  (OneStatement_for) ForBegin:F1 LPARENT ForDS1:F2 SEMI ForCondition:F3 SEMI ForDS2:F4 RPARENT Statement:S5 {: RESULT=new OneStatement_for(F1, F2, F3, F4, S5); RESULT.setLine(F1left); :}
@@ -263,6 +273,29 @@ ForeachDS1 ::= (ForeachDS1_yes) DesignatorStatement:D1 {: RESULT=new ForeachDS1_
 ForeachDS2 ::= (ForeachDS2_yes) DesignatorStatement:D1 {: RESULT=new ForeachDS2_yes(D1); RESULT.setLine(D1left); :}
 			| 
 			(ForeachDS2_epsilon) {: RESULT=new ForeachDS2_epsilon(); :} ;		  
+
+/* ============================================================================
+   NACRT (komentarisano, neaktivno): "prava" foreach petlja - "for (elem : niz) Statement".
+   Postojeci FOREACH token i OneStatement_foreach/ForeachDS1/ForeachDS2 iznad su
+   vec deo aktivne gramatike, ali koriste generican DesignatorStatement sa obe
+   strane dvotacke i nemaju semanticku/kodgen podrsku - ovaj nacrt ih NE dira,
+   samo pokazuje kako bi izgledala namenska produkcija sa markerima za setup/cond/body
+   fazu, po uzoru na DesignatorMapBegin marker koji vec koristimo za "map".
+
+   Ako gramatika koristi matched/unmatched podelu zbog dangling-else problema
+   (ova ne koristi - resava se preko "precedence left ELSE"), trebalo bi dodati
+   obe varijante (matched/unmatched) foreach-a paralelno sa if-om.
+
+   nonterminal ForeachBegin2, ForeachColon;
+   nonterminal rs.etf.pp1.symboltable.concepts.Obj ForeachArrName;
+
+   OneStatement ::= ...
+                  | (OneStatement_foreach2) ForeachBegin2 LPARENT Designator ForeachColon ForeachArrName RPARENT Statement
+
+   ForeachBegin2 ::= (ForeachBegin2) FOREACH LPARENT;   // marker: pociatak setup faze
+   ForeachColon  ::= (ForeachColon) COLON;              // marker: kraj odredisnog designatora, pocetak izvornog niza
+   ForeachArrName ::= (ForeachArrName) IDENT;           // izvorni niz (isti obrazac kao DesignatorArrName)
+   ============================================================================ */
 
 DesignatorStatement ::= (DesignatorStatement_assign) Designator:D1 Assignop:A2 Expr:E3 {: RESULT=new DesignatorStatement_assign(D1, A2, E3); RESULT.setLine(D1left); :}
 			 		|
@@ -363,6 +396,14 @@ Designator ::= (Designator_var) IDENT:I1 {: RESULT=new Designator_var(I1); RESUL
 				(Designator_findAny) IDENT:I1 DOT FINDANY LPARENT Expr:E2 RPARENT {: RESULT=new Designator_findAny(I1, E2); RESULT.setLine(I1left); :}
 				|
 				(Designator_map) DesignatorMapBegin:D1 ARROW Expr:E2 RPARENT {: RESULT=new Designator_map(D1, E2); RESULT.setLine(D1left); :}
+				/* NACRT (komentarisano, neaktivno): count operacija nad nizom - "odrediste = niz.count(Expr)".
+				   Testirano i potvrdjeno da radi (privremeno aktivirano, zatim vraceno kao komentar).
+				   Isti obrazac kao Designator_findAny (IDENT DOT <kljucna_rec> LPARENT Expr RPARENT), pa
+				   se uklapa bez ikakvog dodatnog parser konflikta - deljeni prefiks "Designator Assignop"
+				   je vec resen istom logikom kao za findAny/map.
+				|
+				(Designator_count) IDENT DOT COUNT LPARENT Expr RPARENT
+				*/
 				;
 
 DesignatorArrName ::= (DesignatorArrName) IDENT:I1 {: RESULT=new DesignatorArrName(I1); RESULT.setLine(I1left); :};

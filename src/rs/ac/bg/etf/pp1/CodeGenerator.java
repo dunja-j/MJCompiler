@@ -958,3 +958,173 @@ private Map<String, List<Integer>> patchAddrs = new HashMap<>();
 	}
 
  */
+
+/* ============================================================================
+   NACRTI ZA TRI NEZAVISNE JEZICKE MODIFIKACIJE (GENERISANJE KODA)
+   Sve u ovom bloku je iskljucivo predlog/skica - nista odavde nije aktivno.
+   Odgovarajuce gramaticke/semanticke skice su u spec/mjparser.cup, spec/mjlexer.lex
+   i SemAnalyzer.java.
+   ============================================================================
+
+   ----------------------------------------------------------------------------
+   1) FOREACH PETLJA:  for (elem : niz) Statement
+   ----------------------------------------------------------------------------
+   Foreach se generise inline (za razliku od findAny/map, telo je proizvoljan
+   Statement, ne jedan Expr) - marker cvorovi (ForeachBegin2/ForeachColon iz
+   mjparser.cup nacrta) rade setup, isto kao sto ForBegin/ForDS1/ForDS2 rade za "for".
+
+   Stanje pre aload/baload ekvivalenta (Code.load na sintetickom Obj.Elem, isti
+   trik kao u findAny/map): "..., arrayReference, internalIndex".
+   Stanje posle: "..., elementValue".
+
+   Skriveni interni indeks MORA imati stvaran runtime lokalni slot (Tab.insert
+   tokom SemAnalyzer prolaza, isto kao $fa$i$/$map$i$ za findAny/map), jer se
+   frame size (broj lokala posle "enter" instrukcije) racuna pre generisanja
+   koda - ne moze se dodati slot naknadno u CodeGeneratoru. Za ugnjezdene foreach
+   petlje trebalo bi unapred izracunati maksimalnu dubinu ugnjezdavanja i
+   rezervisati odgovarajuci broj skrivenih int slotova (po jedan po nivou).
+
+   Ako izvorni niz-designator moze imati sporedne efekte (npr. poziv funkcije
+   koji vraca niz), trebalo bi ga evaluirati JEDNOM i sacuvati referencu u
+   dodatnom skrivenom slotu, a ne ponovo ucitavati Designator svaki put.
+
+	// private Stack<int[]> foreachLoopInfo = new Stack<>(); // {loopAddress, exitJumpAddr, updateAddress}
+	// private Stack<List<Integer>> foreachBreakJmp2 = new Stack<>();
+	// private Stack<List<Integer>> foreachContinueJmp2 = new Stack<>();
+	//
+	// @Override
+	// public void visit(ForeachBegin2 foreachBegin) {
+	//     foreachBreakJmp2.push(new ArrayList<Integer>());
+	//     foreachContinueJmp2.push(new ArrayList<Integer>());
+	//     breakTargets.push("foreach");
+	//     // internalIndex = 0  (koristeci skriveni slot iz SemAnalyzer-a, npr preko staticke mape kao findAnyTemps)
+	//     // Code.loadConst(0);
+	//     // Code.store(internalIndexObj);
+	// }
+	//
+	// @Override
+	// public void visit(ForeachColon foreachColon) {
+	//     int loopAddress = Code.pc;
+	//     // load internalIndex; load arrayReference; arraylength; putFalseJump(Code.lt, 0) -> exitJump
+	//     // ako je niz sa sporednim efektima: ucitati ga JEDNOM ovde i sacuvati u skriveni slot
+	//     // umesto ponovnog Designator ucitavanja pri svakoj proveri uslova
+	//     // ...
+	//     // load arrayReference; load internalIndex; Code.load(new Obj(Obj.Elem, "...", elemType)); Code.store(destObj);
+	//     // foreachLoopInfo.push(new int[]{ loopAddress, exitJumpAddr, -1 }); // updateAddress se popuni kasnije
+	// }
+	//
+	// @Override
+	// public void visit(OneStatement_foreach2 foreachStmt) {
+	//     int[] info = foreachLoopInfo.pop();
+	//     int loopAddress = info[0], exitJumpAddr = info[1];
+	//
+	//     // continue skace ovde (updateAddress), pa se fixup-uje pre inkrementa:
+	//     List<Integer> continues = foreachContinueJmp2.pop();
+	//     for (Integer c : continues) Code.fixup(c);
+	//
+	//     // internalIndex++
+	//     // Code.load(internalIndexObj); Code.loadConst(1); Code.put(Code.add); Code.store(internalIndexObj);
+	//     Code.putJump(loopAddress); // nazad na proveru uslova (forward exit jmp gore je vec emitovan sa placeholderom, ovde se samo vraca)
+	//
+	//     Code.fixup(exitJumpAddr); // sada znamo gde je "posle petlje", PC se ne pomera rucno - samo se patch-uje ranije zapisan placeholder
+	//
+	//     List<Integer> breaks = foreachBreakJmp2.pop();
+	//     for (Integer b : breaks) Code.fixup(b);
+	//
+	//     if (!breakTargets.isEmpty() && "foreach".equals(breakTargets.peek())) breakTargets.pop();
+	// }
+	//
+	// U visit(OneStatement_break)/visit(OneStatement_continue) bi trebalo dodati granu
+	// analognu postojecoj "for" grani (forBreakJmp/forContinueJmp), ali za "foreach" -
+	// npr. proveru breakTargets.peek().equals("foreach") pre for-ove grane.
+
+   ----------------------------------------------------------------------------
+   2) COUNT OPERACIJA:  odrediste = niz.count(Expr);
+   ----------------------------------------------------------------------------
+   TESTIRANO I POTVRDJENO DA RADI (privremeno aktivirano na test301_jul.mj - tacno
+   prebrojane pojave trazene vrednosti u nizu, i za 0 i za 1 pojavljivanje; potom
+   vraceno u komentar). Skoro identicno vec aktivnom visit(Designator_findAny)
+   petlja-obrascu, samo umesto putJump na "found" cim se pogodi poklapanje, ovde
+   se brojac uvecava i petlja NASTAVLJA do kraja niza (mora proci kroz SVE elemente).
+
+   Stanje pre poredjenja (isto kao findAny): "..., niz[i], searchVal".
+   Nakon petlje na steku ostaje samo "..., countResult" (int).
+
+   Alternativa - runtime helper po uzoru na initPredeclaredMethods() (ord/chr/len
+   su vec implementirani kao rucno sastavljene mini-funkcije, bez diranja
+   mj-runtime-1.1.jar), sa razlicitim variantama za word (aload/int,bool) i
+   byte (baload/char) nizove - izbegava se ponavljanje iste petlje na svakom
+   mestu poziva, po cenu poziva funkcije (Code.call).
+
+	// @Override
+	// public void visit(Designator_count designatorCount) {
+	//     Obj[] temps = SemAnalyzer.countTemps.get(designatorCount);
+	//     if (temps == null) return;
+	//     Obj idxObj = temps[0], cntObj = temps[1], arrObj = temps[2], searchValObj = temps[3];
+	//     Struct elemType = arrObj.getType().getElemType();
+	//
+	//     // stack: [ ExprValue ] -> searchVal (skriveni slot, isti obrazac kao $fa$v$ kod findAny)
+	//     Code.store(searchValObj);
+	//     Code.loadConst(0); Code.store(idxObj);   // i = 0
+	//     Code.loadConst(0); Code.store(cntObj);   // count = 0
+	//
+	//     int loopStart = Code.pc;
+	//     Code.load(idxObj); Code.load(arrObj); Code.put(Code.arraylength);
+	//     Code.putFalseJump(Code.lt, 0); int doneJmp = Code.pc - 2;
+	//
+	//     Code.load(arrObj); Code.load(idxObj);
+	//     Code.load(new Obj(Obj.Elem, "$cnt$elem", elemType)); // niz[i]
+	//     Code.load(searchValObj);
+	//     Code.putFalseJump(Code.eq, 0); int notEqualJmp = Code.pc - 2;
+	//
+	//     Code.load(cntObj); Code.loadConst(1); Code.put(Code.add); Code.store(cntObj); // count++
+	//
+	//     Code.fixup(notEqualJmp);
+	//     Code.load(idxObj); Code.loadConst(1); Code.put(Code.add); Code.store(idxObj); // i++
+	//     Code.putJump(loopStart);
+	//
+	//     Code.fixup(doneJmp);
+	//     Code.load(cntObj); // rezultat (int) je na steku
+	// }
+
+   ----------------------------------------------------------------------------
+   3) ISPIS CELOG NIZA:  print(niz);  print(niz, width);
+   ----------------------------------------------------------------------------
+   Jedno mesto na operandnom steku sadrzi REFERENCU niza (od Expr-a), ne sve
+   elemente odjednom. U aktivnom visit(OneStatement_print1)/visit(OneStatement_print2)
+   bi se dodalo grananje po tipu:
+
+	// @Override
+	// public void visit(OneStatement_print1 statementPrint1) {
+	//     Struct tip = statementPrint1.getExpr().struct;
+	//     if (tip.getKind() != Struct.Array) {
+	//         Code.loadConst(1);
+	//         Code.put(Code.bprint);          // POSTOJECA skalarna logika - ostaje nepromenjena
+	//     }
+	//     else {
+	//         // Expr je vec ostavio arrayReference na steku (isto kao kod findAny/map DesignatorArrName)
+	//         Code.loadConst(1); // podrazumevani width
+	//         boolean isChar = tip.getElemType().equals(Tab.charType);
+	//         // Code.put(Code.call); Code.put2( adresa wordArrayPrint/byteArrayPrint - offsett) ;
+	//         // ili inline verzija (bez runtime helpera), analogno findAny petlji:
+	//         // Obj idxObj = ...; // skriveni slot
+	//         // int loopStart = Code.pc;
+	//         // Code.load(idxObj); Code.load(arrReferenceObj); Code.put(Code.arraylength);
+	//         // Code.putFalseJump(Code.lt, 0); int doneJmp = Code.pc - 2;
+	//         // Code.load(arrReferenceObj); Code.load(idxObj);
+	//         // Code.load(new Obj(Obj.Elem, "$parr$elem", tip.getElemType())); // niz[i]
+	//         // Code.loadConst(1); // width
+	//         // Code.put(isChar ? Code.bprint : Code.print);
+	//         // Code.load(idxObj); Code.loadConst(1); Code.put(Code.add); Code.store(idxObj);
+	//         // Code.putJump(loopStart);
+	//         // Code.fixup(doneJmp);
+	//     }
+	// }
+	//
+	// Pre print/bprint instrukcije stek mora biti: "..., elementValue, width".
+	// Ako runtime helper nije moguc (nema pristupa mj-runtime izvornom kodu),
+	// inline implementacija (iznad) mora unapred rezervisati skriveni slot za
+	// indeks, i - za proizvoljan Expr (ne samo prost Designator) - dodatni
+	// skriveni slot za samu referencu niza, isto kao searchVal kod findAny.
+============================================================================ */
+

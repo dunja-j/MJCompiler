@@ -93,3 +93,12 @@ import java_cup.runtime.Symbol;
 ([a-z]|[A-Z])[a-z|A-Z|0-9|_]* 	{ return new_symbol (sym.IDENT, yytext()); }
 
 .			{ System.err.println("Leksicka greska ("+yytext()+") na liniji "+(yyline+1) + " i u koloni " + (yycolumn+1) + "\n"); }
+
+/* ============================================================================
+   NACRT (komentarisano, neaktivno): leksicko pravilo za "count" operaciju nad nizom.
+   Testirano i potvrdjeno da radi (privremeno aktivirano, zatim vraceno kao komentar).
+   Isti obrazac kao za "findAny"/"map" iznad - rezervisana rec pre generickog
+   IDENT pravila, tako da se ne meša sa identifikatorima.
+   ============================================================================
+   "count"		{ return new_symbol(sym.COUNT, yytext()); }
+*/
