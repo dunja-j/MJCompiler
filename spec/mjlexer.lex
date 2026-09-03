@@ -82,6 +82,7 @@ import java_cup.runtime.Symbol;
 "||"		{ return new_symbol(sym.OR, yytext()); }
 "?"			{ return new_symbol(sym.QUESTION, yytext()); }
 "=>"		{ return new_symbol(sym.ARROW, yytext()); }
+"@"			{ return new_symbol(sym.AT, yytext()); }
 
 "//" 				{ yybegin(COMMENT); }
 <COMMENT> .			{ yybegin(COMMENT); }

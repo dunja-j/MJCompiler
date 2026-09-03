@@ -146,6 +146,15 @@ public class CodeGenerator extends VisitorAdaptor {
 	}
 	
 	@Override
+	public void visit(FactorReal_at factorAt) { // (Expr1 @ Expr2) = (Expr1+Expr2)^2
+		fixupZaTernarniZaPocetakNaExpr2();
+		// stack: [ Expr1, Expr2 ]
+		Code.put(Code.add);   // stack: [ Expr1+Expr2 ]
+		Code.put(Code.dup);   // stack: [ zbir, zbir ]
+		Code.put(Code.mul);   // stack: [ zbir*zbir ]
+	}
+	
+	@Override
 	public void visit(FactorReal_method factor) {
 		fixupZaTernarniZaPocetakNaExpr2();
 		// mora offset jer call inc pc, i mora se pre call racunati

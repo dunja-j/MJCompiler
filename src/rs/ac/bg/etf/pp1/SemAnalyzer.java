@@ -596,6 +596,15 @@ public class SemAnalyzer extends VisitorAdaptor {
 	}
 	
 	@Override
+	public void visit(FactorReal_at factorAt) { // (Expr1 @ Expr2)
+		if (!factorAt.getExpr().struct.equals(Tab.intType) || !factorAt.getExpr1().struct.equals(Tab.intType)) {
+			report_error("[FactorRealAt] Oba operanda '@' moraju biti int", factorAt);
+			factorAt.struct = Tab.noType;
+		}
+		else factorAt.struct = Tab.intType;
+	}
+	
+	@Override
 	public void visit(Factor factor) {
 		if (factor.getUnary() instanceof Unary_minus) { //desio se minus
 			if (factor.getFactorReal().struct.equals(Tab.intType)) {
