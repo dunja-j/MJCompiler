@@ -185,129 +185,129 @@ public class CodeGenerator extends VisitorAdaptor {
 	}
 	
 	@Override
-	public void visit(Designator_findAny findAny) {
+	public void visit(DesignatorArrFindAny findAnyArr) {
 		fixupZaTernarniZaPocetakNaExpr2();
+		// namerno se ovde nista ne generise - niz se ucitava tek unutar petlje (visit(Designator_findAny))
+	}
 	
-		Obj[] temps = SemAnalyzer.findAnyTemps.get(findAny);
-		if (temps == null) return; // semanticka greska je vec prijavljena, kod se ionako ne generise pri gresci
+	@Override
+	public void visit(Designator_findAny findAny) {
+		Obj arrObj = findAny.getDesignatorArrFindAny().obj;
+		if (arrObj == Tab.noObj) return; // semanticka greska je vec prijavljena, kod se ionako ne generise pri gresci
 	
-		Obj counterObj = temps[0];
-		Obj searchValObj = temps[1];
-		Obj arrObj = temps[2];
+		boolean isChar = arrObj.getType().getElemType().equals(Tab.charType);
 	
-		// stack: [ EXPRVAL ] (vrednost za pretragu, vec je izracunata)
-		Code.store(searchValObj);	// searchVal = Expr
-		Code.loadConst(0);
-		Code.store(counterObj);	// i = 0
+		// stack: [ v ]  (trazena vrednost, Expr je vec izracunat)
+		Code.loadConst(0);				// [v, i]
 	
 		int loopStart = Code.pc;
-		Code.load(counterObj);		// i
-		Code.load(arrObj);			// niz
-		Code.put(Code.arraylength);	// niz.length      stack: [i, length]
-		Code.putFalseJump(Code.lt, 0);	// ako i >= length -> notFound
+		Code.put(Code.dup);			// [v,i,i]
+		Code.load(arrObj);				// [v,i,i,arr]
+		Code.put(Code.arraylength);	// [v,i,i,len]
+		Code.putFalseJump(Code.lt, 0);	// i>=len -> notFound; inace nazad na [v,i]
 		int notFoundJmp = Code.pc - 2;
 	
-		Code.load(arrObj);			// niz
-		Code.load(counterObj);		// i               stack: [niz, i]
-		Code.load(new Obj(Obj.Elem, "$fa$elem", arrObj.getType().getElemType())); // niz[i]
-		Code.load(searchValObj);	// stack: [niz[i], searchVal]
-		Code.putFalseJump(Code.eq, 0);	// ako nije jednako -> nastavi (increment)
-		int notEqualJmp = Code.pc - 2;
+		Code.put(Code.dup2);			// [v,i,v,i]  (radna kopija za citanje elementa)
+		Code.load(arrObj);				// [v,i,v,i,arr]
+		Code.put(Code.dup_x1);			// [v,i,v,arr,i,arr]
+		Code.put(Code.pop);				// [v,i,v,arr,i]
+		Code.put(isChar ? Code.baload : Code.aload);	// [v,i,v,elem]
+		Code.putFalseJump(Code.eq, 0);	// nije jednako -> nastavi; inace pronadjeno, nazad na [v,i]
+		int continueJmp = Code.pc - 2;
 	
-		// pronadjeno
+		// pronadjeno: stack [v,i]
+		Code.put(Code.pop);
+		Code.put(Code.pop);
 		Code.loadConst(1);
 		Code.putJump(0);
-		int foundJmp = Code.pc - 2;
+		int endJmp = Code.pc - 2;
 	
-		// nije jednako, i++ pa nazad na pocetak petlje
-		Code.fixup(notEqualJmp);
-		Code.load(counterObj);
+		// nije jednako: i++ pa nazad na pocetak petlje
+		Code.fixup(continueJmp);
 		Code.loadConst(1);
-		Code.put(Code.add);
-		Code.store(counterObj);
+		Code.put(Code.add);			// [v, i+1]
 		Code.putJump(loopStart);
 	
-		// nije pronadjeno (petlja zavrsena)
+		// petlja zavrsena, nije pronadjeno
 		Code.fixup(notFoundJmp);
+		Code.put(Code.pop);
+		Code.put(Code.pop);
 		Code.loadConst(0);
 	
 		// zajednicka tacka - rezultat (0/1) je na stacku
-		Code.fixup(foundJmp);
+		Code.fixup(endJmp);
 	}
 	
-	// map: DesignatorMapBegin generise sve pre Expr-a (alokacija novog niza, brojac, provera i < length,
-	// ident = niz[i], i priprema stek za store na kraju), tako da se Expr-ov kod izvrsava PONOVO svaki put
-	// kad se skoci nazad na loopStart (Expr fizicki sedi u petlji, izmedju ova dva visit-a)
-	private Stack<int[]> mapLoopInfo = new Stack<>();
+	// map: petlja se u potpunosti odrzava preko steka (par [noviNiz, i]),
+	// loopStart/doneJmp/arrObj se cuvaju samo unutar CodeGenerator-a (jedan prolaz, ne prelazi u drugu fazu)
+	private Stack<Object[]> mapLoopInfo = new Stack<>();
 	
 	@Override
 	public void visit(DesignatorMapBegin mapBegin) {
 		fixupZaTernarniZaPocetakNaExpr2();
 	
-		Obj[] temps = SemAnalyzer.mapTemps.get(mapBegin);
-		if (temps == null) return; // semanticka greska je vec prijavljena
+		Obj arrObj = mapBegin.obj;
+		if (arrObj == Tab.noObj) return; // semanticka greska je vec prijavljena
 	
-		Obj counterObj = temps[0];
-		Obj newArrObj = temps[1];
-		Obj srcArrObj = temps[2];
-		Obj identObj = temps[3];
-		Struct elemType = srcArrObj.getType().getElemType();
+		Struct elemType = arrObj.getType().getElemType();
 	
-		// noviNiz = new elemType[srcNiz.length]
-		Code.load(srcArrObj);
+		// noviNiz = new elemType[niz.length]
+		Code.load(arrObj);
 		Code.put(Code.arraylength);
 		Code.put(Code.newarray);
-		Code.put(elemType.equals(Tab.charType) ? 0 : 1);
-		Code.store(newArrObj);
+		Code.put(elemType.equals(Tab.charType) ? 0 : 1);	// [noviNiz]
 	
-		Code.loadConst(0);
-		Code.store(counterObj);	// i = 0
+		Code.loadConst(0);				// [noviNiz, i]
 	
 		int loopStart = Code.pc;
-		Code.load(counterObj);
-		Code.load(srcArrObj);
-		Code.put(Code.arraylength);
-		Code.putFalseJump(Code.lt, 0);	// ako i >= length -> gotovo
+		Code.put(Code.dup);			// [noviNiz,i,i]
+		Code.load(arrObj);				// [noviNiz,i,i,arr]
+		Code.put(Code.arraylength);	// [noviNiz,i,i,len]
+		Code.putFalseJump(Code.lt, 0);	// i>=len -> gotovo; inace nazad na [noviNiz,i]
 		int doneJmp = Code.pc - 2;
 	
-		// ident = srcNiz[i]
-		Code.load(srcArrObj);
-		Code.load(counterObj);
-		Code.load(new Obj(Obj.Elem, "$map$read", elemType));
-		Code.store(identObj);
+		mapLoopInfo.push(new Object[]{ loopStart, doneJmp, arrObj });
+	}
 	
-		// priprema za store noviNiz[i] = Expr posle sto se Expr izracuna (sledeci u obilasku)
-		Code.load(newArrObj);
-		Code.load(counterObj);
+	@Override
+	public void visit(MapIdent mapIdent) {
+		if (mapIdent.obj == Tab.noObj || mapLoopInfo.isEmpty()) return;
 	
-		mapLoopInfo.push(new int[]{ loopStart, doneJmp });
+		Object[] info = mapLoopInfo.peek();
+		Obj arrObj = (Obj) info[2];
+		boolean isChar = arrObj.getType().getElemType().equals(Tab.charType);
+	
+		// ident = niz[i]      stack: [noviNiz,i] -> [noviNiz,i]
+		Code.put(Code.dup);
+		Code.load(arrObj);
+		Code.put(Code.dup_x1);
+		Code.put(Code.pop);
+		Code.put(isChar ? Code.baload : Code.aload);
+		Code.store(mapIdent.obj);
+	
+		// dupliraj par pre nego sto se Expr izracuna, da bi nam nakon store-a na kraju
+		// ostao ocuvan [noviNiz,i] za sledecu iteraciju
+		Code.put(Code.dup2);			// [noviNiz,i,noviNiz,i]
 	}
 	
 	@Override
 	public void visit(Designator_map designatorMap) {
-		Obj[] temps = SemAnalyzer.mapTemps.get(designatorMap.getDesignatorMapBegin());
-		if (temps == null) return; // semanticka greska je vec prijavljena
+		if (mapLoopInfo.isEmpty()) return;
+		Object[] info = mapLoopInfo.pop();
+		int loopStart = (Integer) info[0];
+		int doneJmp = (Integer) info[1];
+		Obj arrObj = (Obj) info[2];
+		boolean isChar = arrObj.getType().getElemType().equals(Tab.charType);
 	
-		Obj counterObj = temps[0];
-		Obj newArrObj = temps[1];
-		Obj srcArrObj = temps[2];
-		Struct elemType = srcArrObj.getType().getElemType();
+		// stack: [noviNiz,i,noviNiz,i,ExprValue] -> noviNiz[i] = ExprValue; ostaje [noviNiz,i]
+		Code.put(isChar ? Code.bastore : Code.astore);
 	
-		int[] loopInfo = mapLoopInfo.pop();
-		int loopStart = loopInfo[0];
-		int doneJmp = loopInfo[1];
-	
-		// stack: [ noviNiz, i, ExprValue ] -> noviNiz[i] = ExprValue
-		Code.store(new Obj(Obj.Elem, "$map$write", elemType));
-	
-		Code.load(counterObj);
 		Code.loadConst(1);
-		Code.put(Code.add);
-		Code.store(counterObj);	// i++
+		Code.put(Code.add);			// [noviNiz, i+1]
 		Code.putJump(loopStart);
 	
-		Code.fixup(doneJmp);
-		Code.load(newArrObj);	// rezultat map poziva - referenca na novi niz
+		Code.fixup(doneJmp);			// stack: [noviNiz,i]
+		Code.put(Code.pop);			// rezultat map poziva - referenca na novi niz
 	}
 	
 	
