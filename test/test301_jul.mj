@@ -68,6 +68,31 @@ int a;
 		bt = niz.findAny(bodovi);
 		print(bt); print(eol);
 		
+		print(eol);
+		temp = (2 @ 3);
+		print(temp); //25
+		print(eol);
+		print( (1 @ 4) ); //25
+		print(eol);
+		
+		temp = niz[^1];
+		print(temp); //12 (poslednji element niza [2,3,12])
+		print(eol);
+		print(niz[^2]); //3
+		print(eol);
+		
+		temp = 5;
+		temp+++;
+		print(temp); //7
+		print(eol);
+		niz[0]+++;
+		print(niz[0]); //4 (bilo 2, +2)
+		print(eol);
+		
+		temp = niz.sum();
+		print(temp); //19 (4+3+12)
+		print(eol);
+		
 	}
 }
 

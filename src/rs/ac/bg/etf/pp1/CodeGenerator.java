@@ -127,8 +127,8 @@ public class CodeGenerator extends VisitorAdaptor {
 	public void visit(FactorReal_d factor) {
 		fixupZaTernarniZaPocetakNaExpr2();
 		if (factor.getDesignator() instanceof Designator_length || factor.getDesignator() instanceof Designator_findAny
-				|| factor.getDesignator() instanceof Designator_map)
-	        return; //  !!!da uradi skip loading array.length / findAny / map rezultat je vec na stacku!!!
+				|| factor.getDesignator() instanceof Designator_map || factor.getDesignator() instanceof Designator_sum)
+	        return; //  !!!da uradi skip loading array.length / findAny / map / sum rezultat je vec na stacku!!!
 		
 		//za ovo pravimo visit, jer smo ga ovde tek pozvali
 		//ali npr gde radimo Designator = nesto, tu necemo jer to je store neki
@@ -267,6 +267,46 @@ public class CodeGenerator extends VisitorAdaptor {
 	
 		// zajednicka tacka - rezultat (0/1) je na stacku
 		Code.fixup(foundJmp);
+	}
+	
+	@Override
+	public void visit(Designator_sum designatorSum) {
+		fixupZaTernarniZaPocetakNaExpr2();
+	
+		Obj[] temps = SemAnalyzer.sumTemps.get(designatorSum);
+		if (temps == null) return; // semanticka greska je vec prijavljena
+	
+		Obj idxObj = temps[0];
+		Obj accObj = temps[1];
+		Obj arrObj = temps[2];
+	
+		Code.loadConst(0);
+		Code.store(idxObj);	// i = 0
+		Code.loadConst(0);
+		Code.store(accObj);	// suma = 0
+	
+		int loopStart = Code.pc;
+		Code.load(idxObj);
+		Code.load(arrObj);
+		Code.put(Code.arraylength);	// stack: [i, length]
+		Code.putFalseJump(Code.lt, 0);	// ako i >= length -> gotovo
+		int doneJmp = Code.pc - 2;
+	
+		Code.load(accObj);
+		Code.load(arrObj);
+		Code.load(idxObj);
+		Code.load(new Obj(Obj.Elem, "$sum$elem", Tab.intType)); // niz[i]
+		Code.put(Code.add);
+		Code.store(accObj);	// suma += niz[i]
+	
+		Code.load(idxObj);
+		Code.loadConst(1);
+		Code.put(Code.add);
+		Code.store(idxObj);	// i++
+		Code.putJump(loopStart);
+	
+		Code.fixup(doneJmp);
+		Code.load(accObj);		// rezultat (int) je na stacku
 	}
 	
 	// map: DesignatorMapBegin generise sve pre Expr-a (alokacija novog niza, brojac, provera i < length,

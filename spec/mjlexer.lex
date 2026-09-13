@@ -53,6 +53,7 @@ import java_cup.runtime.Symbol;
 "enum"		{ return new_symbol(sym.ENUM, yytext()); }
 "findAny"	{ return new_symbol(sym.FINDANY, yytext()); }
 "map"		{ return new_symbol(sym.MAP, yytext()); }
+"sum"		{ return new_symbol(sym.SUM, yytext()); }
 
 "+" 		{ return new_symbol(sym.PLUS, yytext()); }
 "-"			{ return new_symbol(sym.MINUS, yytext()); }

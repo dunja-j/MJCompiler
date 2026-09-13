@@ -50,6 +50,10 @@ public class SemAnalyzer extends VisitorAdaptor {
 	static java.util.Map<FactorReal_fromEnd, Obj> fromEndTemps = new java.util.HashMap<>();
 	private int fromEndTempCounter = 0;
 	
+	// sum: skladiste skrivenih lokalnih promenljivih (indeks i akumulator) po AST cvoru
+	static java.util.Map<Designator_sum, Obj[]> sumTemps = new java.util.HashMap<>();
+	private int sumTempCounter = 0;
+	
 	private boolean ourAssignableTo(Struct s1, Struct s2) { // gledamo da li su s2 = s1
     	if(s1.assignableTo(s2)) return true;
     	else if(s2.getKind() == Struct.Int && s1.getKind() == Struct.Enum) return true;
@@ -456,6 +460,32 @@ public class SemAnalyzer extends VisitorAdaptor {
 			Obj searchValObj = Tab.insert(Obj.Var, "$fa$v$" + findAnyTempCounter, elemType);
 			findAnyTempCounter++;
 			findAnyTemps.put(findAny, new Obj[]{ counterObj, searchValObj, arrObj });
+		}
+	}
+	
+	@Override
+	public void visit(Designator_sum designatorSum) {
+		Obj arrObj = Tab.find(designatorSum.getI1());
+		boolean valid = false;
+	
+		if (arrObj == Tab.noObj) {
+			report_error("[DesignatorSum] Pristupamo nedefinisanoj promenljivi niza: " + designatorSum.getI1(), designatorSum);
+		}
+		else if (arrObj.getKind() != Obj.Var || arrObj.getType().getKind() != Struct.Array) {
+			report_error("[DesignatorSum] " + designatorSum.getI1() + " nije niz", designatorSum);
+		}
+		else if (!arrObj.getType().getElemType().equals(Tab.intType)) {
+			report_error("[DesignatorSum] Niz " + designatorSum.getI1() + " nije tipa int", designatorSum);
+		}
+		else valid = true;
+	
+		designatorSum.obj = new Obj(Obj.Con, "sum", Tab.intType);
+	
+		if (valid) {
+			Obj idxObj = Tab.insert(Obj.Var, "$sum$i$" + sumTempCounter, Tab.intType);
+			Obj accObj = Tab.insert(Obj.Var, "$sum$s$" + sumTempCounter, Tab.intType);
+			sumTempCounter++;
+			sumTemps.put(designatorSum, new Obj[]{ idxObj, accObj, arrObj });
 		}
 	}
 	

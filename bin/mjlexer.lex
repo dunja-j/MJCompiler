@@ -53,6 +53,7 @@ import java_cup.runtime.Symbol;
 "enum"		{ return new_symbol(sym.ENUM, yytext()); }
 "findAny"	{ return new_symbol(sym.FINDANY, yytext()); }
 "map"		{ return new_symbol(sym.MAP, yytext()); }
+"sum"		{ return new_symbol(sym.SUM, yytext()); }
 
 "+" 		{ return new_symbol(sym.PLUS, yytext()); }
 "-"			{ return new_symbol(sym.MINUS, yytext()); }
@@ -71,6 +72,7 @@ import java_cup.runtime.Symbol;
 "{" 		{ return new_symbol(sym.LBRACE, yytext()); }
 "}"			{ return new_symbol(sym.RBRACE, yytext()); }
 "++"		{ return new_symbol(sym.INC, yytext()); }
+"+++"		{ return new_symbol(sym.INC2, yytext()); }
 "--"		{ return new_symbol(sym.DEC, yytext()); }
 "=="		{ return new_symbol(sym.EQUAL, yytext()); }
 "!="		{ return new_symbol(sym.NOTEQUAL, yytext()); }
@@ -82,6 +84,8 @@ import java_cup.runtime.Symbol;
 "||"		{ return new_symbol(sym.OR, yytext()); }
 "?"			{ return new_symbol(sym.QUESTION, yytext()); }
 "=>"		{ return new_symbol(sym.ARROW, yytext()); }
+"@"			{ return new_symbol(sym.AT, yytext()); }
+"^"			{ return new_symbol(sym.HAT, yytext()); }
 
 "//" 				{ yybegin(COMMENT); }
 <COMMENT> .			{ yybegin(COMMENT); }

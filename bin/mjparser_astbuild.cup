@@ -50,8 +50,8 @@ scan with {:
 :}
 
 terminal PROG, LBRACE, RBRACE, LBRACKET, RBRACKET, LPARENT, RPARENT, SEMI, COMMA, COLON, QUESTION, DOT;
-terminal BREAK, RETURN, ENUM, CONST, LENGTH, IF, ELSE, NEW, PRINT, READ, VOID, CONTINUE, FOR, FOREACH, FINDANY, MAP;
-terminal ASSIGN, PLUS, MINUS, MUL, DIV, MOD, INC, DEC, EQUAL, NOTEQUAL, GREATER, GREATEREQUAL, LESS, LESSEQUAL, AND, OR, ARROW;
+terminal BREAK, RETURN, ENUM, CONST, LENGTH, IF, ELSE, NEW, PRINT, READ, VOID, CONTINUE, FOR, FOREACH, FINDANY, MAP, SUM;
+terminal ASSIGN, PLUS, MINUS, MUL, DIV, MOD, INC, INC2, DEC, EQUAL, NOTEQUAL, GREATER, GREATEREQUAL, LESS, LESSEQUAL, AND, OR, ARROW, AT, HAT;
 terminal Integer NUMBER, BOOL;
 terminal Character CHARACTER;
 terminal String IDENT;
@@ -306,6 +306,8 @@ DesignatorStatement ::= (DesignatorStatement_assign) Designator:D1 Assignop:A2 E
 			 		|
 			 		(DesignatorStatement_inc) Designator:D1 INC {: RESULT=new DesignatorStatement_inc(D1); RESULT.setLine(D1left); :}
 			 		|
+			 		(DesignatorStatement_inc2) Designator:D1 INC2 {: RESULT=new DesignatorStatement_inc2(D1); RESULT.setLine(D1left); :}
+			 		|
 			 		(DesignatorStatement_dec) Designator:D1 DEC {: RESULT=new DesignatorStatement_dec(D1); RESULT.setLine(D1left); :}
 			 		;
 
@@ -382,6 +384,10 @@ FactorReal ::= (FactorReal_d) Designator:D1 {: RESULT=new FactorReal_d(D1); RESU
 			   (FactorReal_newarr) NEW Type:T1 LBRACKET Expr:E2 RBRACKET {: RESULT=new FactorReal_newarr(T1, E2); RESULT.setLine(T1left); :}
 			   |
 			   (FactorReal_expr) LPARENT Expr:E1 RPARENT {: RESULT=new FactorReal_expr(E1); RESULT.setLine(E1left); :}
+			   |
+			   (FactorReal_at) LPARENT Expr:E1 AT Expr:E2 RPARENT {: RESULT=new FactorReal_at(E1, E2); RESULT.setLine(E1left); :}
+			   |
+			   (FactorReal_fromEnd) DesignatorArrName:D1 LBRACKET HAT Expr:E2 RBRACKET {: RESULT=new FactorReal_fromEnd(D1, E2); RESULT.setLine(D1left); :}
 			   ;
 		  
 
@@ -404,6 +410,8 @@ Designator ::= (Designator_var) IDENT:I1 {: RESULT=new Designator_var(I1); RESUL
 				|
 				(Designator_count) IDENT DOT COUNT LPARENT Expr RPARENT
 				*/
+				|
+				(Designator_sum) IDENT:I1 DOT SUM LPARENT RPARENT {: RESULT=new Designator_sum(I1); RESULT.setLine(I1left); :}
 				;
 
 DesignatorArrName ::= (DesignatorArrName) IDENT:I1 {: RESULT=new DesignatorArrName(I1); RESULT.setLine(I1left); :};
