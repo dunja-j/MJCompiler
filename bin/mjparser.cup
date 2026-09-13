@@ -62,10 +62,10 @@ nonterminal Statement, StatementContinue, Statements, OneStatement, ElseStatemen
 nonterminal ActPars, ActParsContinue;
 nonterminal Assignop, Addop, Relop, Mulop, Unary, ActParsList;
 nonterminal ConstAssign, EnumName, ActParsBegin;
-nonterminal ForBegin, ForDS1, ForCondition, ForDS2, ElseBegin, ForeachBegin, ForeachDS1, ForeachDS2, DesignatorMapBegin;
+nonterminal ForBegin, ForDS1, ForCondition, ForDS2, ElseBegin, ForeachBegin, ForeachDS1, ForeachDS2;
 nonterminal rs.etf.pp1.symboltable.concepts.Struct Factor, FactorReal, Term, Expr, ExpAddop, ExprNonTernary, ExprTernary, MulopList;
 nonterminal rs.etf.pp1.symboltable.concepts.Struct Condition,  CondTerm, CondFact, CondTermList, CondFactList;
-nonterminal rs.etf.pp1.symboltable.concepts.Obj Designator, DesignatorArrName, DesignatorArrLength;
+nonterminal rs.etf.pp1.symboltable.concepts.Obj Designator, DesignatorArrName, DesignatorArrLength, DesignatorArrFindAny, DesignatorMapBegin, MapIdent;
 nonterminal rs.etf.pp1.symboltable.concepts.Obj MethodTypeAndName;
 nonterminal rs.etf.pp1.symboltable.concepts.Struct Type;
 
@@ -322,14 +322,16 @@ Designator ::= (Designator_var) IDENT
 				|
 				(Designator_length) DesignatorArrLength
 				|
-				(Designator_findAny) IDENT DOT FINDANY LPARENT Expr RPARENT
+				(Designator_findAny) DesignatorArrFindAny LPARENT Expr RPARENT
 				|
-				(Designator_map) DesignatorMapBegin ARROW Expr RPARENT
+				(Designator_map) DesignatorMapBegin MapIdent ARROW Expr RPARENT
 				;
 
 DesignatorArrName ::= (DesignatorArrName) IDENT;
 DesignatorArrLength ::= (DesignatorArrLength) IDENT DOT LENGTH;
-DesignatorMapBegin ::= (DesignatorMapBegin) IDENT DOT MAP LPARENT IDENT;
+DesignatorArrFindAny ::= (DesignatorArrFindAny) IDENT DOT FINDANY;
+DesignatorMapBegin ::= (DesignatorMapBegin) IDENT DOT MAP LPARENT;
+MapIdent ::= (MapIdent) IDENT;
 	
 	
 Assignop ::= (Assignop) ASSIGN;
