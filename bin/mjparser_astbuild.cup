@@ -51,6 +51,7 @@ scan with {:
 
 terminal PROG, LBRACE, RBRACE, LBRACKET, RBRACKET, LPARENT, RPARENT, SEMI, COMMA, COLON, QUESTION, DOT;
 terminal BREAK, RETURN, ENUM, CONST, LENGTH, IF, ELSE, NEW, PRINT, READ, VOID, CONTINUE, FOR, FOREACH, FINDANY, MAP;
+//terminal COUNT;
 terminal ASSIGN, PLUS, MINUS, MUL, DIV, MOD, INC, DEC, EQUAL, NOTEQUAL, GREATER, GREATEREQUAL, LESS, LESSEQUAL, AND, OR, ARROW;
 terminal Integer NUMBER, BOOL;
 terminal Character CHARACTER;
@@ -103,6 +104,7 @@ nonterminal ForeachDS2 ForeachDS2;
 nonterminal rs.etf.pp1.symboltable.concepts.Struct Factor, FactorReal, Term, Expr, ExpAddop, ExprNonTernary, ExprTernary, MulopList;
 nonterminal rs.etf.pp1.symboltable.concepts.Struct Condition,  CondTerm, CondFact, CondTermList, CondFactList;
 nonterminal rs.etf.pp1.symboltable.concepts.Obj Designator, DesignatorArrName, DesignatorArrLength, DesignatorArrFindAny, DesignatorMapBegin, MapIdent;
+//nonterminal rs.etf.pp1.symboltable.concepts.Obj DesignatorArrCount;
 nonterminal rs.etf.pp1.symboltable.concepts.Obj MethodTypeAndName;
 nonterminal rs.etf.pp1.symboltable.concepts.Struct Type;
 
@@ -362,6 +364,9 @@ Designator ::= (Designator_var) IDENT:I1 {: RESULT=new Designator_var(I1); RESUL
 				(Designator_findAny) DesignatorArrFindAny:D1 LPARENT Expr:E2 RPARENT {: RESULT=new Designator_findAny(D1, E2); RESULT.setLine(D1left); :}
 				|
 				(Designator_map) DesignatorMapBegin:D1 MapIdent:M2 ARROW Expr:E3 RPARENT {: RESULT=new Designator_map(D1, M2, E3); RESULT.setLine(D1left); :}
+				// NACRT: count
+				//|
+				//(Designator_count) DesignatorArrCount LPARENT Expr RPARENT
 				;
 
 DesignatorArrName ::= (DesignatorArrName) IDENT:I1 {: RESULT=new DesignatorArrName(I1); RESULT.setLine(I1left); :};
@@ -369,6 +374,7 @@ DesignatorArrLength ::= (DesignatorArrLength) IDENT:I1 DOT LENGTH {: RESULT=new 
 DesignatorArrFindAny ::= (DesignatorArrFindAny) IDENT:I1 DOT FINDANY {: RESULT=new DesignatorArrFindAny(I1); RESULT.setLine(I1left); :};
 DesignatorMapBegin ::= (DesignatorMapBegin) IDENT:I1 DOT MAP LPARENT {: RESULT=new DesignatorMapBegin(I1); RESULT.setLine(I1left); :};
 MapIdent ::= (MapIdent) IDENT:I1 {: RESULT=new MapIdent(I1); RESULT.setLine(I1left); :};
+//DesignatorArrCount ::= (DesignatorArrCount) IDENT DOT COUNT; // NACRT: count
 	
 	
 Assignop ::= (Assignop) ASSIGN {: RESULT=new Assignop(); :};

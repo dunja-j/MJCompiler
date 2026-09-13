@@ -51,6 +51,7 @@ scan with {:
 
 terminal PROG, LBRACE, RBRACE, LBRACKET, RBRACKET, LPARENT, RPARENT, SEMI, COMMA, COLON, QUESTION, DOT;
 terminal BREAK, RETURN, ENUM, CONST, LENGTH, IF, ELSE, NEW, PRINT, READ, VOID, CONTINUE, FOR, FOREACH, FINDANY, MAP;
+//terminal COUNT;
 terminal ASSIGN, PLUS, MINUS, MUL, DIV, MOD, INC, DEC, EQUAL, NOTEQUAL, GREATER, GREATEREQUAL, LESS, LESSEQUAL, AND, OR, ARROW;
 terminal Integer NUMBER, BOOL;
 terminal Character CHARACTER;
@@ -66,6 +67,7 @@ nonterminal ForBegin, ForDS1, ForCondition, ForDS2, ElseBegin, ForeachBegin, For
 nonterminal rs.etf.pp1.symboltable.concepts.Struct Factor, FactorReal, Term, Expr, ExpAddop, ExprNonTernary, ExprTernary, MulopList;
 nonterminal rs.etf.pp1.symboltable.concepts.Struct Condition,  CondTerm, CondFact, CondTermList, CondFactList;
 nonterminal rs.etf.pp1.symboltable.concepts.Obj Designator, DesignatorArrName, DesignatorArrLength, DesignatorArrFindAny, DesignatorMapBegin, MapIdent;
+//nonterminal rs.etf.pp1.symboltable.concepts.Obj DesignatorArrCount;
 nonterminal rs.etf.pp1.symboltable.concepts.Obj MethodTypeAndName;
 nonterminal rs.etf.pp1.symboltable.concepts.Struct Type;
 
@@ -325,6 +327,9 @@ Designator ::= (Designator_var) IDENT
 				(Designator_findAny) DesignatorArrFindAny LPARENT Expr RPARENT
 				|
 				(Designator_map) DesignatorMapBegin MapIdent ARROW Expr RPARENT
+				// NACRT: count
+				//|
+				//(Designator_count) DesignatorArrCount LPARENT Expr RPARENT
 				;
 
 DesignatorArrName ::= (DesignatorArrName) IDENT;
@@ -332,6 +337,7 @@ DesignatorArrLength ::= (DesignatorArrLength) IDENT DOT LENGTH;
 DesignatorArrFindAny ::= (DesignatorArrFindAny) IDENT DOT FINDANY;
 DesignatorMapBegin ::= (DesignatorMapBegin) IDENT DOT MAP LPARENT;
 MapIdent ::= (MapIdent) IDENT;
+//DesignatorArrCount ::= (DesignatorArrCount) IDENT DOT COUNT; // NACRT: count
 	
 	
 Assignop ::= (Assignop) ASSIGN;

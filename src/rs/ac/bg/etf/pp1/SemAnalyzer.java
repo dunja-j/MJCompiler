@@ -439,7 +439,41 @@ public class SemAnalyzer extends VisitorAdaptor {
 	
 		findAny.obj = new Obj(Obj.Con, "findAny", boolType);
 	}
+
+	///COUNT
+
+	// @Override
+	// public void visit(DesignatorArrCount countArr) {
+	// 	Obj objArr = Tab.find(countArr.getI1());
+	// 	if (objArr == Tab.noObj) {
+	// 		report_error("[DesignatorArrCount] Pristupamo nedefinisanoj promenljivoj tipa niz: " + countArr.getI1(), countArr);
+	// 		countArr.obj = Tab.noObj;
+	// 	}
+	// 	else if (objArr.getKind() != Obj.Var || objArr.getType().getKind() != Struct.Array) {
+	// 		report_error("[DesignatorArrCount] " + countArr.getI1() + " nije niz", countArr);
+	// 		countArr.obj = Tab.noObj;
+	// 	}
+	// 	else countArr.obj = objArr;
+	// }
 	
+	// @Override
+	// public void visit(Designator_count count) {
+	// 	Obj arrObj = count.getDesignatorArrCount().obj;
+	
+	// 	if (arrObj != Tab.noObj) {
+	// 		Struct elemType = arrObj.getType().getElemType();
+	// 		if (!elemType.equals(Tab.intType) && !elemType.equals(Tab.charType) && !elemType.equals(boolType)) {
+	// 			report_error("[DesignatorCount] Niz nije ugradjenog tipa (int/char/bool)", count);
+	// 		}
+	// 		else if (!ourAssignableTo(count.getExpr().struct, elemType) && !ourAssignableTo(elemType, count.getExpr().struct)) {
+	// 			report_error("[DesignatorCount] Neodgovarajuci tip izraza za pretragu u nizu", count);
+	// 		}
+	// 	}
+	
+	// 	count.obj = new Obj(Obj.Con, "count", Tab.intType);
+	// }
+	
+
 	@Override
 	public void visit(DesignatorMapBegin mapBegin) {
 		Obj arrObj = Tab.find(mapBegin.getI1());

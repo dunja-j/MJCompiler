@@ -127,8 +127,9 @@ public class CodeGenerator extends VisitorAdaptor {
 	public void visit(FactorReal_d factor) {
 		fixupZaTernarniZaPocetakNaExpr2();
 		if (factor.getDesignator() instanceof Designator_length || factor.getDesignator() instanceof Designator_findAny
-				|| factor.getDesignator() instanceof Designator_map)
-	        return; //  !!!da uradi skip loading array.length / findAny / map rezultat je vec na stacku!!!
+				|| factor.getDesignator() instanceof Designator_map )
+	        return; //  !!!da uradi skip loading array.length / findAny / map rezultat je vec na stacku!!! 
+			/// count dodaj (|| factor.getDesignator() instanceof Designator_count)
 		
 		//za ovo pravimo visit, jer smo ga ovde tek pozvali
 		//ali npr gde radimo Designator = nesto, tu necemo jer to je store neki
@@ -237,6 +238,66 @@ public class CodeGenerator extends VisitorAdaptor {
 		// zajednicka tacka - rezultat (0/1) je na stacku
 		Code.fixup(endJmp);
 	}
+	
+	///COUNT
+	
+	// @Override
+	// public void visit(DesignatorArrCount countArr) {
+	// 	fixupZaTernarniZaPocetakNaExpr2();
+	// 	// namerno se ovde nista ne generise - niz se ucitava tek unutar petlje (visit(Designator_count))
+	// }
+	
+	// @Override
+	// public void visit(Designator_count count) {
+	// 	Obj arrObj = count.getDesignatorArrCount().obj;
+	// 	if (arrObj == Tab.noObj) return; // semanticka greska je vec prijavljena, kod se ionako ne generise pri gresci
+	
+	// 	boolean isChar = arrObj.getType().getElemType().equals(Tab.charType);
+	
+	// 	// stack: [ v ]  (trazena vrednost, Expr je vec izracunat)
+	// 	// zeljeni redosled je [cnt, v, i] (cnt na dnu, v u sredini, i na vrhu - i i v su cesto potrebni, pa su gore)
+	// 	Code.loadConst(0);				// [v, 0]
+	// 	Code.put(Code.dup_x1);
+	// 	Code.put(Code.pop);			// swap -> [cnt=0, v]
+	// 	Code.loadConst(0);				// [cnt, v, i=0]
+	
+	// 	int loopStart = Code.pc;
+	// 	Code.put(Code.dup);			// [cnt,v,i,i]
+	// 	Code.load(arrObj);				// [cnt,v,i,i,arr]
+	// 	Code.put(Code.arraylength);	// [cnt,v,i,i,len]
+	// 	Code.putFalseJump(Code.lt, 0);	// i>=len -> notFound; inace nazad na [cnt,v,i]
+	// 	int notFoundJmp = Code.pc - 2;
+	
+	// 	Code.put(Code.dup2);			// [cnt,v,i,v,i]  (radna kopija za citanje elementa)
+	// 	Code.load(arrObj);				// [cnt,v,i,v,i,arr]
+	// 	Code.put(Code.dup_x1);			// [cnt,v,i,v,arr,i,arr]
+	// 	Code.put(Code.pop);				// [cnt,v,i,v,arr,i]
+	// 	Code.put(isChar ? Code.baload : Code.aload);	// [cnt,v,i,v,elem]
+	// 	Code.putFalseJump(Code.eq, 0);	// nije jednako -> preskoci uvecanje cnt; inace pogodak
+	// 	int notMatchJmp = Code.pc - 2;
+	
+	// 	// pogodak: cnt je zakopan na dnu trojke [cnt,v,i], dizemo ga na vrh rotacijom (dup_x2+pop = pomeri vrh na dno),
+	// 	// primenjeno dva puta (cnt,v,i)->(i,cnt,v)->(v,i,cnt), uvecamo, pa treci put vratimo raspored [cnt+1,v,i]
+	// 	Code.put(Code.dup_x2);
+	// 	Code.put(Code.pop);			// (cnt,v,i) -> (i,cnt,v)
+	// 	Code.put(Code.dup_x2);
+	// 	Code.put(Code.pop);			// (i,cnt,v) -> (v,i,cnt)
+	// 	Code.loadConst(1);
+	// 	Code.put(Code.add);			// (v,i,cnt+1)
+	// 	Code.put(Code.dup_x2);
+	// 	Code.put(Code.pop);			// (v,i,cnt+1) -> (cnt+1,v,i)
+	
+	// 	// zajednicka tacka za oba slucaja (pogodak i promasaj): stack [cnt,v,i] -> i++
+	// 	Code.fixup(notMatchJmp);
+	// 	Code.loadConst(1);
+	// 	Code.put(Code.add);			// [cnt, v, i+1]
+	// 	Code.putJump(loopStart);
+	
+	// 	// petlja zavrsena - rezultat je cnt, odbacujemo v i i
+	// 	Code.fixup(notFoundJmp);
+	// 	Code.put(Code.pop);
+	// 	Code.put(Code.pop);			// [cnt]
+	// }
 	
 	// map: petlja se u potpunosti odrzava preko steka (par [noviNiz, i]),
 	// loopStart/doneJmp/arrObj se cuvaju samo unutar CodeGenerator-a (jedan prolaz, ne prelazi u drugu fazu)
