@@ -413,7 +413,7 @@ public class SemAnalyzer extends VisitorAdaptor {
 	public void visit(DesignatorArrFindAny findAnyArr) {
 		Obj objArr = Tab.find(findAnyArr.getI1());
 		if (objArr == Tab.noObj) {
-			report_error("[DesignatorArrFindAny] Pristupamo nedefinisanoj promenljivi niza: " + findAnyArr.getI1(), findAnyArr);
+			report_error("[DesignatorArrFindAny] Pristupamo nedefinisanoj promenljivoj tipa niz: " + findAnyArr.getI1(), findAnyArr);
 			findAnyArr.obj = Tab.noObj;
 		}
 		else if (objArr.getKind() != Obj.Var || objArr.getType().getKind() != Struct.Array) {
